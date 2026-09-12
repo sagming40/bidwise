@@ -1,0 +1,36 @@
+# ── 환경변수 (절대 커밋 금지) ──
+.env
+backend/.env
+frontend/.env
+frontend/.env.local
+
+# ── Python ──
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+
+# ── Node / React ──
+node_modules/
+frontend/dist/
+frontend/build/
+.vite/
+
+# ── DB / 데이터 (실수로 덤프 파일 커밋 방지) ──
+*.sqlite3
+*.db
+*.sql.gz
+
+# ── 로그 ──
+*.log
+
+# ── 에디터 / IDE ──
+.vscode/
+.idea/
+
+# ── OS ──
+.DS_Store
+Thumbs.db
