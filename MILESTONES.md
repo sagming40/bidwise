@@ -71,11 +71,11 @@ gantt
 
 > 목표: 코드를 쓸 수 있는 바닥을 깐다
 
-- [ ] PostgreSQL 로컬 설치 및 `bidwise` 데이터베이스 생성
-- [ ] Python 가상환경 + `requirements.txt` 의존성 설치
-- [ ] `.env` 설정 (`DATABASE_URL`, `DATA_GO_KR_SERVICE_KEY`) — `.gitignore` 확인
-- [ ] `02_erd.md` 기준으로 SQLAlchemy 모델 작성 (`bid_announcements`, `bid_results`)
-- [ ] 테이블 생성 스크립트 실행
+- [x] PostgreSQL 로컬 설치 및 `bidwise` 데이터베이스 생성
+- [x] Python 가상환경 + `requirements.txt` 의존성 설치
+- [x] `.env` 설정 (`DATABASE_URL`, `DATA_GO_KR_SERVICE_KEY`) — `.gitignore` 확인
+- [x] `02_erd.md` 기준으로 SQLAlchemy 모델 작성 (`bid_announcements`, `bid_results`) — `region_normalized`, `category`/`category_source`는 제외하고 M2에서 추가 (근거: `02_erd.md` 6장 참고)
+- [x] 테이블 생성 스크립트 실행
 
 **완료 기준**
 ```
@@ -238,7 +238,7 @@ Swagger(/docs)에서 summary API를 호출해 200 응답을 확인할 수 있다
 | 마일스톤 | 상태 | 완료일 |
 |---|---|---|
 | 설계 (문서 6종 + Figma 목업) | ✅ 완료 | 2026-09-11 |
-| M0 개발 환경 · DB 구축 | ⬜ 예정 | |
+| M0 개발 환경 · DB 구축 | ✅ 완료 | 2026-09-12 |
 | M1 데이터 수집 파이프라인 | ⬜ 예정 | |
 | M2 정제 · 분석 로직 | ⬜ 예정 | |
 | M3 조회 API + 첫 화면 | ⬜ 예정 | |

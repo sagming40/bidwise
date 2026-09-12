@@ -481,8 +481,10 @@ JavaScript 관습은 camelCase지만, 여기서는 **DB 컬럼명 → API 필드
 
 ## 6. 미결정 사항
 
-- [ ] `region_normalized` 컬럼을 실제로 추가할지 (3.2절 근거상 추가하는 쪽이 유력)
-- [ ] 공사종류 분류 결과도 컬럼으로 저장할지 (`category`, `category_source`)
+- [x] `region_normalized` 컬럼을 실제로 추가할지 
+      → 결정: 추가함, M2에서 (ERD 6장 참고)
+- [x] 공사종류 분류 결과도 컬럼으로 저장할지 
+      → 결정: 저장함 (`category`, `category_source`), M2에서 (ERD 6장 참고)
 - [ ] 프론트엔드에서 snake_case를 그대로 쓸지, camelCase로 변환할지
 - [ ] `/api/stats/trend` (시계열 추이) 엔드포인트 — 확장 기능이므로 이번 명세에서는 제외
 - [ ] 응답 캐싱 여부 (같은 파라미터의 반복 요청 처리)

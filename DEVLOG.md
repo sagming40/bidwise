@@ -59,20 +59,20 @@
 
 | 항목 | 내용 |
 |---|---|
-| 마지막 완료 마일스톤 | **설계 단계 ✅** (문서 6종 + Figma 목업 + MILESTONES) |
-| 다음 작업 | M0 착수 — PostgreSQL 로컬 설치 → 가상환경 → `.env` → 모델 재작성 |
-| 최근 커밋 | `init: BidWise 프로젝트 기초 골격 및 DB 스키마 설계` (⚠ 아래 기록 참고 — ERD 확정 전 버전) |
+| 마지막 완료 마일스톤 | **M0 개발 환경 · DB 구축 ✅** (2026-09-12) |
+| 다음 작업 | M1 착수 — 나라장터 API 클라이언트 작성 (입찰공고 / 낙찰정보 2종) |
+| 최근 커밋 | (세션 종료 절차에서 커밋 예정 — 아래 "오늘 커밋" 참고) |
 
 ### 환경 요약
 
 | 항목 | 값 |
 |---|---|
-| Python | 미설치 (M0에서 venv 생성 예정) |
-| Backend | FastAPI, SQLAlchemy, pandas, APScheduler |
-| DB | PostgreSQL, `bidwise` (M0에서 로컬 생성 예정) |
-| Frontend | React + TypeScript + shadcn/ui (M3에서 생성 예정) |
-| 시각화 | Recharts(일반 차트), ECharts(지역 지도) |
-| 외부 API 인증키 | 발급 완료 (입찰공고정보서비스 / 낙찰정보서비스 공용) |
+| Python | venv (`backend/venv`), 패키지 목록은 `backend/requirements.txt` |
+| Backend | FastAPI, SQLAlchemy 2.0, psycopg2-binary, pandas, APScheduler — 설치 완료 |
+| DB | PostgreSQL 18, `bidwise` (로컬 생성 완료), `bid_announcements`/`bid_results` 테이블 생성 완료 |
+| Frontend | React + TypeScript + shadcn/ui (M3에서 생성 예정, 변동 없음) |
+| 시각화 | Recharts(일반 차트), ECharts(지역 지도) — M4에서 연동 예정, 변동 없음 |
+| 외부 API 인증키 | 발급 완료, `backend/.env`에 저장 완료 |
 
 > ⚠️ **로컬 개발 환경은 아직 아무것도 설치되지 않았다.** 위 표는 확정된 스택이지 실행 가능한 상태가 아니다. M0 완료 시 이 표를 실측값으로 갱신할 것.
 
@@ -81,6 +81,60 @@
 ## 기록
 
 <!-- 최신 항목을 위에 추가한다 -->
+
+---
+
+## 2026-09-12 (토) — M0: 개발 환경 · DB 구축 완료
+
+### [환경설정] PostgreSQL 15+ 기본 보안 정책 — public 스키마 CREATE 권한 없음
+
+**증상**
+```powershell
+psycopg2.errors.InsufficientPrivilege: 오류: public 스키마(schema) 접근 권한 없음
+```
+
+**원인**
+PostgreSQL 15부터 `public` 스키마에 대한 기본 CREATE 권한이 DB 소유자/슈퍼유저 외에는 제거됨.
+`GRANT ALL PRIVILEGES ON DATABASE`는 DB 접속 권한이지, 스키마 안에 테이블을 만들 권한과는 별개다.
+
+**해결**
+```sql
+\c bidwise
+GRANT ALL ON SCHEMA public TO bidwise_app;
+```
+
+**배운 것**
+DB 유저를 새로 만들 때 "DB 접속 권한"과 "스키마 CREATE 권한"은 별도로 챙겨야 한다.
+M2의 `ALTER TABLE`이나 다른 환경(새 PC, CI)에서 똑같이 만날 수 있는 함정.
+
+### [설계] `region_normalized`, `category`/`category_source` 컬럼을 M0 모델에서 제외
+
+**증상**
+`02_erd.md` 6장, `04_api_spec.md` 6장에 이 세 컬럼이 미결정(`- [ ]`)으로 남아 있었고,
+`MILESTONES.md`는 이걸 M2 작업으로 배치해둔 상태라 문서 간 불일치가 있었다.
+
+**원인**
+`region_normalized`는 지역 정규화 로직이, `category`/`category_source`는 2단계 폴백 분류 로직이
+있어야 값이 채워지는데, 그 로직 자체가 M2 작업 목록에 있다.
+M0에서 컬럼만 먼저 만들면 로직이 붙기 전까지 전부 NULL로 남아,
+"원래 값이 없어서 NULL"인지 "아직 로직을 안 돌려서 NULL"인지 구분이 안 된다.
+
+**해결**
+M0 모델은 `02_erd.md` 4장 표에 있는 컬럼만으로 작성. 세 컬럼은 M2에서 `ALTER TABLE`로 추가하기로
+결정하고, `02_erd.md`·`04_api_spec.md`의 미결정 체크박스를 "결정됨 + 시점"으로 갱신.
+
+**배운 것**
+스키마에 컬럼을 추가할 시점은 "필요성"이 아니라 "그 시점에 값을 채울 로직이 있는가"로 판단한다.
+
+**오늘 커밋**
+- `feat(M0): SQLAlchemy 모델 및 DB 스키마 생성`
+- `chore(M0): 개발 환경 구성`
+- `docs(M0): DEVLOG 갱신 및 마일스톤 완료 처리`
+
+**다음에 할 일**
+- M1 착수: 나라장터 API 클라이언트 작성
+- 인증키 이중 인코딩 주의 — Encoding 키를 `requests`의 `params` 딕셔너리로 넘기면 이중 인코딩되어
+  인증 실패. URL 문자열에 직접 넣는 방식으로 처리할 것
 
 ---
 
