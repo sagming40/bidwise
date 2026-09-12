@@ -6,3 +6,4 @@ python-dotenv
 pandas
 apscheduler
 pydantic
+requests
