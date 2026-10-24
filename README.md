@@ -2,7 +2,7 @@
 
 > 조달청 나라장터 공사 입찰 데이터를 수집·분석해, 지역별·공종별 낙찰 경향을 지도와 차트로 조망하는 웹 대시보드
 
-[![상태](https://img.shields.io/badge/상태-설계%20완료%20·%20구현%20예정-F2C12E)](./MILESTONES.md)
+[![상태](https://img.shields.io/badge/상태-M1%20데이터%20수집%20진행%20중-F2C12E)](./MILESTONES.md)
 [![백엔드](https://img.shields.io/badge/backend-Python%20·%20FastAPI-3776AB)](#기술-스택)
 [![DB](https://img.shields.io/badge/database-PostgreSQL-336791)](#기술-스택)
 [![프론트](https://img.shields.io/badge/frontend-React%20·%20TypeScript-61DAFB)](#기술-스택)
@@ -143,7 +143,7 @@ erDiagram
 
 | 기능 | 상태 | 설명 |
 |---|---|---|
-| 나라장터 데이터 자동 수집 | ⬜ 예정 | 두 API를 `bid_ntce_no`로 연결, 일 1회 스케줄링 |
+| 나라장터 데이터 자동 수집 | 🟡 진행 중 | 두 API를 `bid_ntce_no`로 연결, 일 1회 스케줄링 — 입찰공고 수집·페이징까지 완료 |
 | 지역·공종 정제 및 분류 | ⬜ 예정 | 지역명 정규화, 공종 2단계 폴백 분류 |
 | 요약 통계 대시보드 | ⬜ 예정 | 전체 공고 수 · 평균 낙찰률 · 예산 규모 |
 | 지역별 낙찰률 지도 | ⬜ 예정 | ECharts 코로플레스, 5단계 블루 스케일 |
@@ -224,7 +224,7 @@ flowchart LR
 
 ## 실행 방법
 
-> ⚠️ **현재 설계 단계이며 아직 실행 가능한 코드가 없습니다.** 아래는 M0 완료 후 적용될 예정 절차입니다.
+> ⚠️ **현재 M1(데이터 수집) 진행 중입니다.** 지금 실행할 수 있는 것은 DB 테이블 생성까지이고, API 서버(`uvicorn`)는 M3, 프론트엔드는 M3 이후에 생깁니다.
 
 ### 사전 요구사항
 
@@ -245,10 +245,12 @@ cp .env.example .env
 # .env 파일에 DATABASE_URL, DATA_GO_KR_SERVICE_KEY 입력
 
 python create_tables.py         # 테이블 생성
-uvicorn main:app --reload       # http://localhost:8000/docs
+uvicorn main:app --reload       # http://localhost:8000/docs  (M3 이후)
 ```
 
-### 프론트엔드
+> PostgreSQL 15+에서는 새로 만든 DB 유저에게 `public` 스키마 CREATE 권한이 기본으로 없습니다. 테이블 생성이 권한 오류로 실패하면 `bidwise` DB에서 `GRANT ALL ON SCHEMA public TO <유저명>;`을 실행하세요. ([DEVLOG](./DEVLOG.md) 2026-09-12 참고)
+
+### 프론트엔드 (M3 이후)
 
 ```bash
 cd frontend
@@ -259,6 +261,8 @@ npm run dev                     # http://localhost:5173
 ### 인증키 주의
 
 `.env`는 `.gitignore`에 포함되어 있습니다. 인증키를 코드에 직접 작성하지 마세요.
+
+공공데이터포털 인증키는 `requests`의 `params`로 넘기므로, URL 인코딩되지 않은 원본 형태(`%`가 없는 키)를 넣어야 합니다. `%2B`·`%3D` 같은 인코딩된 키를 넣으면 이중 인코딩되어 인증에 실패합니다.
 
 ---
 
