@@ -57,18 +57,24 @@ BidWise: 나라장터 공사 입찰 데이터를 수집해서 지역별·공종�
 
 ## 하지 말 것
 - `.env`, API 키를 커밋하지 않는다
+- `alembic.ini`에 한글을 쓰지 않는다 (Windows에서 cp949로 읽어서 `UnicodeDecodeError`가 난다). DB 주소도 넣지 않는다 (`alembic/env.py`가 `.env`에서 읽음)
 - `backend/scratch/`(버리는 검증 스크립트, gitignore 대상)에 남겨야 할 코드를 두지 않는다. 남길 코드는 `app/`이나 `tests/`로
 
 ## 기기 3대
 - 코드는 GitHub로 주고받는다 (`git pull` → 작업 → `git push`)
 - `.env`와 DB 데이터는 git에 없으므로 기기마다 따로 준비한다 (`.env.example` 참고). 한 기기에서 수집한 데이터는 다른 기기에 없다
-- DB 구조: 지금은 `python create_tables.py`. 재정비 2단계에서 Alembic을 넣으면 `git pull` 후 항상 `alembic upgrade head`로 맞춘다 (이 줄은 그때 고친다)
+- DB 구조는 Alembic으로 맞춘다: `git pull` 후 항상 `alembic upgrade head`
+  - `create_tables.py`(2026-10-24 삭제)로 테이블을 만든 기기는 처음 한 번만 `alembic stamp 0001`
+  - 마이그레이션 파일은 **models.py를 고친 기기에서만** 만든다. 번호를 붙인다: `alembic revision --autogenerate --rev-id 0002 -m "add something"` → `0002_add_something.py`
+  - autogenerate 결과는 그대로 믿지 말고 읽어 본 다음 커밋한다. `pytest`의 마이그레이션 테스트가 모델과 어긋나면 실패한다
+- 패키지 버전은 `requirements.txt`에 고정한다. 올리거나 추가했으면 다른 기기에서 `pip install -r requirements.txt` 하라고 DEVLOG에 적는다
 - 다른 기기에서 할 일(패키지 설치, 마이그레이션 적용 등)은 DEVLOG "현재 상태"에 적어 둔다
 
 ## 자주 쓰는 명령 (`backend/`에서, PowerShell)
 ```powershell
 .\venv\Scripts\Activate.ps1      # 가상환경
 pip install -r requirements.txt
-python create_tables.py          # 테이블 생성 (없는 것만)
+alembic upgrade head; alembic check   # 마이그레이션 적용, 모델과 차이 없는지 확인
+pytest                           # 테스트 (임시 SQLite·가짜 응답, 실제 DB·API 안 씀)
 psql -U bidwise_app -d bidwise -c "\dt"   # 테이블 확인
 ```

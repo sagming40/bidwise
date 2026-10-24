@@ -215,6 +215,7 @@ bidwise/
 │
 ├── backend/
 │   ├── app/
+│   │   ├── config.py           # .env 설정 로딩 (2026-10-24 추가)
 │   │   ├── models.py           # SQLAlchemy ORM 모델 (ERD 구현체)
 │   │   ├── database.py         # DB 연결 · 세션 관리
 │   │   ├── schemas.py          # Pydantic 요청/응답 스키마
@@ -234,6 +235,8 @@ bidwise/
 │   │       ├── stats.py        # 통계 조회 엔드포인트
 │   │       └── bids.py         # 공고 목록 조회 엔드포인트
 │   │
+│   ├── alembic/                # DB 마이그레이션 (2026-10-24 추가)
+│   ├── tests/                  # pytest (2026-10-24 추가)
 │   ├── main.py                 # FastAPI 진입점
 │   ├── requirements.txt
 │   └── .env.example

@@ -61,16 +61,17 @@
 |---|---|
 | 마지막 완료 마일스톤 | **M0 개발 환경 · DB 구축 ✅** (2026-09-12) |
 | 진행 중 | **M1 데이터 수집** — 입찰공고 클라이언트·페이징 완료, UPSERT부터 남음 (2026-09-13 이후 중단) |
-| 다음 작업 | 재정비 2단계 — 기반 코드 정리 (`config`, `database`, Alembic, SQLAlchemy 2.0 모델) → M1 UPSERT 재개 |
-| 최근 커밋 | `wip: 입찰공고 Client 작성, requirements 추가` (2026-09-12) |
+| 다음 작업 | ① 각 기기에서 `.env` 확인 → `pip install -r requirements.txt` → `alembic stamp 0001`(M0 테이블 있는 기기) 또는 `alembic upgrade head` → `alembic check` ② M1 UPSERT 재개 (`repository/bid_repo.py`) |
+| 최근 커밋 | `refactor: 기반 코드 정리 — 설정·DB 연결 분리, Alembic, SQLAlchemy 2.0 모델` (2026-10-24) |
+| 다른 기기에서 할 일 | `requirements.txt`가 바뀜(psycopg2 → psycopg 3, alembic·pydantic-settings·pytest 추가) — venv에 다시 설치. `create_tables.py`는 삭제됨 |
 
 ### 환경 요약
 
 | 항목 | 값 |
 |---|---|
-| Python | venv (`backend/venv`), 패키지 목록은 `backend/requirements.txt` |
-| Backend | FastAPI, SQLAlchemy 2.0, psycopg2-binary, pandas, APScheduler — 설치 완료 |
-| DB | PostgreSQL 18, `bidwise` (로컬 생성 완료), `bid_announcements`/`bid_results` 테이블 생성 완료 |
+| Python | 3.13 venv (`backend/venv`), 패키지 버전은 `backend/requirements.txt`에 고정 |
+| Backend | FastAPI, SQLAlchemy 2.1, psycopg 3, Alembic, pydantic-settings, pandas, APScheduler, pytest |
+| DB | PostgreSQL 18, `bidwise`. 스키마는 Alembic으로 관리 (`backend/alembic/versions/`) |
 | Frontend | React + TypeScript + shadcn/ui (M3에서 생성 예정, 변동 없음) |
 | 시각화 | Recharts(일반 차트), ECharts(지역 지도) — M4에서 연동 예정, 변동 없음 |
 | 외부 API 인증키 | 2026-09-12 재발급, `backend/.env`에 저장. `requests`의 `params`로 넘겨 호출 정상 확인 |
@@ -81,6 +82,47 @@
 ## 기록
 
 <!-- 최신 항목을 위에 추가한다 -->
+
+---
+
+## 2026-10-24 (토) — 재정비 2단계: 기반 코드 정리
+
+### [환경설정] 버전을 안 고정했더니 SQLAlchemy 2.1이 깔리고, 기본 DB 드라이버가 바뀌어 있었다
+
+**증상**
+새 venv에 `requirements.txt`를 설치하고 DB에 접속하자마자 실패했다.
+```
+ModuleNotFoundError: No module named 'psycopg'
+```
+psycopg2-binary는 분명히 설치돼 있었다.
+
+**원인**
+`requirements.txt`에 버전이 없어서 그날의 최신인 SQLAlchemy 2.1.6이 깔렸다.
+SQLAlchemy 2.1부터 `postgresql://` 주소의 기본 드라이버가 psycopg2에서 **psycopg(3)**로 바뀌었다.
+M0 때(2.0)는 같은 주소가 psycopg2를 찾았다.
+
+**해결**
+드라이버를 psycopg 3(`psycopg[binary]`)으로 바꾸고 모든 패키지 버전을 `==`로 고정했다.
+`.env`의 `postgresql://...` 주소는 그대로 쓸 수 있다.
+
+**배운 것**
+버전을 고정하지 않으면 "같은 requirements.txt"가 설치하는 날마다 다른 환경이 된다. 기기가 여러 대면 더 그렇다.
+
+### [설계] 기반 코드 정리 내용
+
+- `app/config.py`: `.env` 읽기를 한 곳으로 (pydantic-settings). import 시점이 아니라 처음 쓸 때 읽어서, 테스트가 환경변수로 값을 바꿔 끼울 수 있다
+- `app/database.py`: engine·Session 생성을 한 곳으로
+- `app/models.py`: SQLAlchemy 2.0 스타일(`Mapped[...]`). 테이블 구조는 그대로
+  - `fetched_at`은 UTC로 저장한다. 컬럼이 `timestamp`(시간대 없음)라서, 시간대가 붙은 값을 넣으면 PostgreSQL이 세션 시간대(한국)로 바꿔 9시간 어긋난다 → 시간대를 떼고 넣는다
+- **Alembic**: `0001_initial_schema` = M0 테이블 그대로. 오프라인(`--sql`)으로 뽑은 PostgreSQL DDL이 M0 구조와 같은 것을 확인했다. `create_tables.py`는 삭제
+  - M0 방식으로 테이블이 이미 있는 기기는 `alembic stamp 0001` 한 번 → 이후 `alembic upgrade head`
+- `client.py`: 인증키를 `_call_api`에서 한 번만 붙임, `print` → `logging`
+- **pytest 8개**: 클라이언트 6개(가짜 응답 — 인증키 전달, 에러 코드, 페이징, `items=""`, 차수), 마이그레이션 2개(임시 SQLite에 끝까지 적용한 결과 == models.py, 되돌리기)
+  - 마이그레이션 테스트가 진짜 차이를 잡는지, 모델에 컬럼을 하나 몰래 추가해서 실패하는 것까지 확인했다
+
+**아직 못 한 것**
+- 이 기기(`D:\_dev`)의 `backend/.env`가 `.env.example` 그대로라 **실제 PostgreSQL 검증은 못 했다**. `.env`를 채운 뒤 `alembic stamp 0001`/`upgrade head`와 `alembic check`로 확인할 것
+- 테스트용 응답 JSON(`tests/fixtures/`)은 뼈대만 본뜬 예시다. 다음 실제 호출 때 응답 원문으로 바꾼다
 
 ---
 

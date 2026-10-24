@@ -109,12 +109,14 @@ psql에서 \dt 를 쳤을 때 bid_announcements, bid_results 두 테이블이 �
 
 > 코드가 늘어난 뒤에 바꾸면 비싼 것들만 먼저 정리한다. 근거는 DEVLOG 2026-10-24 항목.
 
-- [ ] `app/config.py` — `.env` 로딩·키 검증을 한 곳으로 (pydantic-settings)
-- [ ] `app/database.py` — engine · Session 관리
-- [ ] Alembic 도입 — 기기 3대의 스키마를 같게 유지, M2 컬럼 추가도 마이그레이션으로
-- [ ] 모델을 SQLAlchemy 2.0 스타일(`Mapped[...]`)로, `datetime.utcnow` 교체
-- [ ] `print` → `logging`, `requirements.txt` 버전 고정
-- [ ] 저장해둔 API 응답 JSON으로 pytest (트래픽 한도를 쓰지 않는 검증)
+- [x] `app/config.py` — `.env` 로딩·키 검증을 한 곳으로 (pydantic-settings)
+- [x] `app/database.py` — engine · Session 관리
+- [x] Alembic 도입 — 기기 3대의 스키마를 같게 유지, M2 컬럼 추가도 마이그레이션으로 (`0001_initial_schema`)
+- [x] 모델을 SQLAlchemy 2.0 스타일(`Mapped[...]`)로, `datetime.utcnow` 교체
+- [x] `print` → `logging`, `requirements.txt` 버전 고정 (드라이버 psycopg2 → psycopg 3)
+- [x] pytest — 가짜 응답으로 클라이언트 6개, 임시 SQLite로 마이그레이션 2개 (2026-10-24)
+- [ ] 실제 PostgreSQL에서 확인 — `.env` 채운 뒤 `alembic stamp 0001` 또는 `upgrade head`, `alembic check`
+- [ ] 테스트용 응답 JSON을 실제 API 응답 원문으로 교체 (지금은 뼈대만 본뜬 예시)
 
 **완료 기준**
 ```

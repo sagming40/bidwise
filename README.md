@@ -244,9 +244,12 @@ pip install -r requirements.txt
 cp .env.example .env
 # .env 파일에 DATABASE_URL, DATA_GO_KR_SERVICE_KEY 입력
 
-python create_tables.py         # 테이블 생성
+alembic upgrade head            # 테이블 생성 (마이그레이션 적용)
+pytest                          # 테스트 (실제 DB·API를 쓰지 않음)
 uvicorn main:app --reload       # http://localhost:8000/docs  (M3 이후)
 ```
+
+> 2026-10-24 이전 방식(`create_tables.py`)으로 이미 테이블을 만든 DB라면, 테이블을 다시 만들지 말고 `alembic stamp 0001`을 한 번 실행한 뒤 `alembic upgrade head`를 쓰세요.
 
 > PostgreSQL 15+에서는 새로 만든 DB 유저에게 `public` 스키마 CREATE 권한이 기본으로 없습니다. 테이블 생성이 권한 오류로 실패하면 `bidwise` DB에서 `GRANT ALL ON SCHEMA public TO <유저명>;`을 실행하세요. ([DEVLOG](./DEVLOG.md) 2026-09-12 참고)
 
