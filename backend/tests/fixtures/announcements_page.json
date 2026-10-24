@@ -1,0 +1,30 @@
+{
+  "response": {
+    "header": {"resultCode": "00", "resultMsg": "정상"},
+    "body": {
+      "items": [
+        {
+          "bidNtceNo": "R26BK01705200",
+          "bidNtceOrd": "000",
+          "bidNtceNm": "외도수영장 개보수 공사",
+          "cnstrtsiteRgnNm": "제주특별자치도 제주시",
+          "mainCnsttyNm": "",
+          "presmptPrce": "123000000",
+          "bidNtceDt": "2026-09-01 10:00:00"
+        },
+        {
+          "bidNtceNo": "R26BK01705200",
+          "bidNtceOrd": "001",
+          "bidNtceNm": "외도수영장 개보수 공사",
+          "cnstrtsiteRgnNm": "제주특별자치도 제주시",
+          "mainCnsttyNm": "",
+          "presmptPrce": "123000000",
+          "bidNtceDt": "2026-09-03 14:00:00"
+        }
+      ],
+      "numOfRows": 2,
+      "pageNo": 1,
+      "totalCount": 2
+    }
+  }
+}

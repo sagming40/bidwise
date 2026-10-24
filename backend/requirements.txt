@@ -1,9 +1,15 @@
-fastapi
-uvicorn[standard]
-sqlalchemy
-psycopg2-binary
-python-dotenv
-pandas
-apscheduler
-pydantic
-requests
+# 버전을 고정한다. 기기 3대에서 같은 버전이 깔려야 "내 PC에선 됐는데"가 안 생긴다.
+# 올릴 때는 한 기기에서 올려 보고 테스트가 통과하면 이 파일을 고쳐서 커밋한다.
+fastapi==0.162.0
+uvicorn[standard]==0.54.0
+sqlalchemy==2.1.6
+psycopg[binary]==3.3.6
+alembic==1.20.1
+pydantic==2.14.1
+pydantic-settings==2.16.1
+pandas==3.1.0
+apscheduler==3.11.3
+requests==2.34.2
+
+# 개발용
+pytest==9.1.1
