@@ -115,7 +115,7 @@ psql에서 \dt 를 쳤을 때 bid_announcements, bid_results 두 테이블이 �
 - [x] 모델을 SQLAlchemy 2.0 스타일(`Mapped[...]`)로, `datetime.utcnow` 교체
 - [x] `print` → `logging`, `requirements.txt` 버전 고정 (드라이버 psycopg2 → psycopg 3)
 - [x] pytest — 가짜 응답으로 클라이언트 6개, 임시 SQLite로 마이그레이션 2개 (2026-10-24)
-- [ ] 실제 PostgreSQL에서 확인 — `.env` 채운 뒤 `alembic stamp 0001` 또는 `upgrade head`, `alembic check`
+- [x] 실제 PostgreSQL에서 확인 — `alembic stamp 0001` → `alembic check` 차이 없음 (2026-10-24, `D:\_dev` 기기. 다른 두 기기는 각자 진행)
 - [ ] 테스트용 응답 JSON을 실제 API 응답 원문으로 교체 (지금은 뼈대만 본뜬 예시)
 
 **완료 기준**

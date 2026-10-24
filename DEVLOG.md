@@ -61,9 +61,9 @@
 |---|---|
 | 마지막 완료 마일스톤 | **M0 개발 환경 · DB 구축 ✅** (2026-09-12) |
 | 진행 중 | **M1 데이터 수집** — 입찰공고 클라이언트·페이징 완료, UPSERT부터 남음 (2026-09-13 이후 중단) |
-| 다음 작업 | ① 각 기기에서 `.env` 확인 → `pip install -r requirements.txt` → `alembic stamp 0001`(M0 테이블 있는 기기) 또는 `alembic upgrade head` → `alembic check` ② M1 UPSERT 재개 (`repository/bid_repo.py`) |
+| 다음 작업 | M1 UPSERT 재개 (`repository/bid_repo.py`) |
 | 최근 커밋 | `refactor: 기반 코드 정리 — 설정·DB 연결 분리, Alembic, SQLAlchemy 2.0 모델` (2026-10-24) |
-| 다른 기기에서 할 일 | `requirements.txt`가 바뀜(psycopg2 → psycopg 3, alembic·pydantic-settings·pytest 추가) — venv에 다시 설치. `create_tables.py`는 삭제됨 |
+| 다른 기기에서 할 일 | 노트북·학교 PC(아직 안 함): `pip install -r requirements.txt` → M0 테이블이 있으면 `alembic stamp 0001`, 없으면 `alembic upgrade head` → `alembic check`. `D:\_dev` 기기는 2026-10-24 완료 |
 
 ### 환경 요약
 
@@ -120,9 +120,19 @@ M0 때(2.0)는 같은 주소가 psycopg2를 찾았다.
 - **pytest 8개**: 클라이언트 6개(가짜 응답 — 인증키 전달, 에러 코드, 페이징, `items=""`, 차수), 마이그레이션 2개(임시 SQLite에 끝까지 적용한 결과 == models.py, 되돌리기)
   - 마이그레이션 테스트가 진짜 차이를 잡는지, 모델에 컬럼을 하나 몰래 추가해서 실패하는 것까지 확인했다
 
+**실제 PostgreSQL 검증** (`D:\_dev` 기기, PostgreSQL 18.4, 세션 시간대 Asia/Seoul)
+- M0 방식으로 만든 테이블이 있었다(0행, `alembic_version` 없음). stamp 전에 실제 구조와 모델을 대조 → 차이 없음
+- `alembic stamp 0001` → `alembic upgrade head` → `alembic current` = `0001 (head)` → `alembic check` = "No new upgrade operations detected."
+- 실제로 써 보고 rollback (데이터는 남기지 않음):
+  - 같은 번호에 차수 `000`·`001` 공존 OK, 같은 `(번호, 차수)` 다시 넣으면 `UniqueViolation`
+  - 한 공고에 낙찰결과 2개 → `UniqueViolation` (1:0..1이 DB에서 강제됨), 결과 없는 공고의 `.result`는 `None`
+  - `NUMERIC(6,3)`에 `87.745`, `BIGINT`에 123억 그대로 저장
+  - `fetched_at` 저장값과 UTC 현재 시각의 차이 0초 → 한국 시간대 세션에서도 9시간 어긋나지 않음
+
 **아직 못 한 것**
-- 이 기기(`D:\_dev`)의 `backend/.env`가 `.env.example` 그대로라 **실제 PostgreSQL 검증은 못 했다**. `.env`를 채운 뒤 `alembic stamp 0001`/`upgrade head`와 `alembic check`로 확인할 것
+- 노트북·학교 PC는 각자 위 순서로 맞춰야 한다 (현재 상태 표 참고)
 - 테스트용 응답 JSON(`tests/fixtures/`)은 뼈대만 본뜬 예시다. 다음 실제 호출 때 응답 원문으로 바꾼다
+- 이 기기의 `.env`는 `postgres` 슈퍼유저로 접속한다. 다른 기기처럼 `bidwise_app` 전용 유저를 쓸지는 나중에 정한다
 
 ---
 
