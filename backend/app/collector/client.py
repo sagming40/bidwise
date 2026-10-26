@@ -17,6 +17,20 @@ BID_ANNOUNCEMENT_URL = (
     "getBidPblancListInfoCnstwk"
 )
 
+# 낙찰정보는 서비스 경로가 ad가 아니라 as다.
+BID_RESULT_URL = (
+    "https://apis.data.go.kr/1230000/as/ScsbidInfoService/"
+    "getScsbidListSttusCnstwk"
+)
+
+# inqryDiv(조회 기준)는 API마다 뜻이 다르다. 2026-10-26 실측:
+#   입찰공고 1 = 공고게시일시
+#   낙찰정보 1 = 결과 등록일시(rgstDt), 2 = 공고일시, 3 = 개찰 관련
+# 낙찰정보를 2(공고일시)로 부르면 "같은 기간에 올라온 공고의 결과"가 와서, 두 API를 같은 기간으로 맞출 수 있다.
+# (2026-10-20 하루치로 확인: 2는 저장된 공고와 10건 중 10건 일치, 1은 0건)
+ANNOUNCEMENT_INQRY_DIV = "1"
+RESULT_INQRY_DIV = "2"
+
 
 class NaraJangteoAPIError(Exception):
     """
@@ -54,25 +68,43 @@ def _call_api(url: str, params: dict) -> dict:
     return data["response"]["body"]
 
 
-def fetch_announcements_page(begin_dt: str, end_dt: str, page_no: int = 1, num_of_rows: int = 100) -> dict:
+def _fetch_page(url: str, inqry_div: str, begin_dt: str, end_dt: str, page_no: int, num_of_rows: int) -> dict:
     """
-    입찰공고 목록에서 딱 1페이지만 가져온다.
+    기간 조회 1페이지. 입찰공고·낙찰정보가 파라미터 모양까지 같아서 주소와 조회 기준만 바꿔 끼운다.
     begin_dt, end_dt 형식: "YYYYMMDDHHMM" (12자리, 예: "202609010000")
     """
     params = {
         "type": "json",
-        "inqryDiv": "1",  # 1 = 공고게시일시 기준 조회
+        "inqryDiv": inqry_div,
         "inqryBgnDt": begin_dt,
         "inqryEndDt": end_dt,
         "pageNo": str(page_no),
         "numOfRows": str(num_of_rows),
     }
-    return _call_api(BID_ANNOUNCEMENT_URL, params)
+    return _call_api(url, params)
+
+
+def fetch_announcements_page(begin_dt: str, end_dt: str, page_no: int = 1, num_of_rows: int = 100) -> dict:
+    """입찰공고 목록에서 딱 1페이지만 가져온다. (공고게시일시 기준)"""
+    return _fetch_page(BID_ANNOUNCEMENT_URL, ANNOUNCEMENT_INQRY_DIV, begin_dt, end_dt, page_no, num_of_rows)
 
 
 def fetch_all_announcements(begin_dt: str, end_dt: str, num_of_rows: int = 100) -> list[dict]:
+    """기간 안에 게시된 입찰공고를 페이지 끝까지 전부 모은다."""
+    return _fetch_all(BID_ANNOUNCEMENT_URL, ANNOUNCEMENT_INQRY_DIV, begin_dt, end_dt, num_of_rows)
+
+
+def fetch_all_results(begin_dt: str, end_dt: str, num_of_rows: int = 100) -> list[dict]:
     """
-    기간 안의 공고를 페이지 끝까지 전부 모아서 반환한다.
+    기간 안에 게시된 "공고"의 낙찰결과를 전부 모은다. (결과가 나온 날이 아니라 공고일 기준)
+    개찰 전·유찰 공고는 결과가 없으니, 같은 기간이라도 공고보다 적게 온다. 에러가 아니다.
+    """
+    return _fetch_all(BID_RESULT_URL, RESULT_INQRY_DIV, begin_dt, end_dt, num_of_rows)
+
+
+def _fetch_all(url: str, inqry_div: str, begin_dt: str, end_dt: str, num_of_rows: int) -> list[dict]:
+    """
+    기간 안의 항목을 페이지 끝까지 전부 모아서 반환한다.
     비유: 도서관에서 1상자에 100권 씩 지원받기로 했다.
     맨 처음 상자에 도서관에서 총 몇 권을 보내줄지 적혀있다.
     즉, 첫 상자를 받아보고 받을 책이 총 몇 권인지 확인한 후 나머지 상자를 계속 요청하는 식이다.
@@ -84,7 +116,7 @@ def fetch_all_announcements(begin_dt: str, end_dt: str, num_of_rows: int = 100) 
     page_no = 1
 
     while True:
-        body = fetch_announcements_page(begin_dt, end_dt, page_no, num_of_rows)
+        body = _fetch_page(url, inqry_div, begin_dt, end_dt, page_no, num_of_rows)
         total_count = body["totalCount"]
 
         # ⚠️ 나라장터 응답의 함정: 결과가 0건이면 "items"가 list가 아니라

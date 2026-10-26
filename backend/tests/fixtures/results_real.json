@@ -1,0 +1,81 @@
+{
+  "response": {
+    "header": {
+      "resultCode": "00",
+      "resultMsg": "정상"
+    },
+    "body": {
+      "items": [
+        {
+          "bidNtceNo": "R26BK01780454",
+          "bidNtceOrd": "000",
+          "bidClsfcNo": "0",
+          "rbidNo": "000",
+          "ntceDivCd": "통050001",
+          "bidNtceNm": "대의면 기초생활거점조성사업 경관개선공사(청년회관 리모델링)",
+          "prtcptCnum": "1",
+          "bidwinnrNm": "주식회사미성종합건설",
+          "bidwinnrBizno": "",
+          "bidwinnrCeoNm": "",
+          "bidwinnrAdrs": "",
+          "bidwinnrTelNo": "",
+          "sucsfbidAmt": "49090000",
+          "sucsfbidRate": "89.99",
+          "rlOpengDt": "2026-10-20 13:13:19",
+          "dminsttCd": "D150534",
+          "dminsttNm": "한국농어촌공사 경남지역본부 의령지사",
+          "rgstDt": "2026-10-20 13:16:49",
+          "fnlSucsfDate": "2026-10-20",
+          "fnlSucsfCorpOfcl": ""
+        },
+        {
+          "bidNtceNo": "R26BK01780568",
+          "bidNtceOrd": "000",
+          "bidClsfcNo": "0",
+          "rbidNo": "000",
+          "ntceDivCd": "통050001",
+          "bidNtceNm": "탄천센터 2처리장 반송슬러지 이송배관 교체공사",
+          "prtcptCnum": "1",
+          "bidwinnrNm": "(주)상신프렌트",
+          "bidwinnrBizno": "",
+          "bidwinnrCeoNm": "",
+          "bidwinnrAdrs": "",
+          "bidwinnrTelNo": "",
+          "sucsfbidAmt": "19701000",
+          "sucsfbidRate": "90",
+          "rlOpengDt": "2026-10-22 16:20:05",
+          "dminsttCd": "B554408",
+          "dminsttNm": "서울물재생시설공단",
+          "rgstDt": "2026-10-22 16:20:22",
+          "fnlSucsfDate": "2026-10-22",
+          "fnlSucsfCorpOfcl": ""
+        },
+        {
+          "bidNtceNo": "R26BK01781603",
+          "bidNtceOrd": "000",
+          "bidClsfcNo": "0",
+          "rbidNo": "000",
+          "ntceDivCd": "통050001",
+          "bidNtceNm": "은대저류지 조경수 보식 및 수목전정공사 ",
+          "prtcptCnum": "1",
+          "bidwinnrNm": "주식회사38조경건설",
+          "bidwinnrBizno": "",
+          "bidwinnrCeoNm": "",
+          "bidwinnrAdrs": "",
+          "bidwinnrTelNo": "",
+          "sucsfbidAmt": "20192000",
+          "sucsfbidRate": "",
+          "rlOpengDt": "2026-10-21 15:11:05",
+          "dminsttCd": "4140000",
+          "dminsttNm": "경기도 연천군",
+          "rgstDt": "2026-10-22 13:39:24",
+          "fnlSucsfDate": "2026-10-22",
+          "fnlSucsfCorpOfcl": ""
+        }
+      ],
+      "numOfRows": 3,
+      "pageNo": 1,
+      "totalCount": 3
+    }
+  }
+}

@@ -10,11 +10,12 @@ import logging
 
 from sqlalchemy import func, select
 
-from app.collector.client import fetch_all_announcements
+from app.collector.client import fetch_all_announcements, fetch_all_results
 from app.database import get_session
-from app.models import BidAnnouncement
-from app.repository.bid_repo import upsert_announcements
+from app.models import BidAnnouncement, BidResult
+from app.repository.bid_repo import upsert_announcements, upsert_results
 from app.transformer.announcement import to_announcement_row
+from app.transformer.result import pick_final_results, to_result_row
 
 logger = logging.getLogger(__name__)
 
@@ -22,29 +23,46 @@ logger = logging.getLogger(__name__)
 NUM_OF_ROWS = 200
 
 
-def collect_announcements(begin_dt: str, end_dt: str) -> int:
+def collect(begin_dt: str, end_dt: str) -> dict:
     """
-    기간(YYYYMMDDHHMM) 안의 입찰공고를 수집해 저장하고, 저장한 공고 수를 돌려준다.
+    기간(YYYYMMDDHHMM) 안에 게시된 입찰공고와 그 낙찰결과를 수집해 저장한다.
+    순서가 중요하다: 공고를 먼저 넣어야 결과가 붙을 announcement_id가 생긴다.
     한 기간이 통째로 들어가거나 통째로 안 들어간다 (commit은 마지막에 한 번).
+
+    낙찰결과는 개찰이 끝나야 생기므로, 같은 기간을 며칠 뒤 다시 돌리면 새로 나온 결과가 더 붙는다.
+    (UPSERT라 두 번 돌려도 행이 중복되지 않는다)
     """
-    items = fetch_all_announcements(begin_dt, end_dt, num_of_rows=NUM_OF_ROWS)
-    rows = [to_announcement_row(item) for item in items]
+    announcement_items = fetch_all_announcements(begin_dt, end_dt, num_of_rows=NUM_OF_ROWS)
+    result_items = fetch_all_results(begin_dt, end_dt, num_of_rows=NUM_OF_ROWS)
+
+    announcement_rows = [to_announcement_row(item) for item in announcement_items]
+    result_rows = [to_result_row(item) for item in pick_final_results(result_items)]
 
     with get_session() as session:
-        saved = upsert_announcements(session, rows)
+        saved_announcements = upsert_announcements(session, announcement_rows)
+        saved_results, skipped_results = upsert_results(session, result_rows)
         session.commit()
-        total = session.scalar(select(func.count()).select_from(BidAnnouncement))
+        total_announcements = session.scalar(select(func.count()).select_from(BidAnnouncement))
+        total_results = session.scalar(select(func.count()).select_from(BidResult))
 
-    logger.info("받은 %d건 → 저장 %d건 (중복 제외), 테이블 전체 %d행", len(items), saved, total)
-    return saved
+    logger.info("공고: 받은 %d건 → 저장 %d건, 테이블 전체 %d행",
+                len(announcement_items), saved_announcements, total_announcements)
+    logger.info("낙찰결과: 받은 %d건 → 최종 %d건 → 저장 %d건 (공고 없어 건너뜀 %d), 테이블 전체 %d행",
+                len(result_items), len(result_rows), saved_results, skipped_results, total_results)
+
+    return {
+        "announcements": saved_announcements,
+        "results": saved_results,
+        "results_skipped": skipped_results,
+    }
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
 
-    parser = argparse.ArgumentParser(description="나라장터 입찰공고 수동 수집")
+    parser = argparse.ArgumentParser(description="나라장터 입찰공고·낙찰결과 수동 수집")
     parser.add_argument("begin_dt", help="시작 일시 YYYYMMDDHHMM (예: 202610200000)")
     parser.add_argument("end_dt", help="끝 일시 YYYYMMDDHHMM (예: 202610202359)")
     args = parser.parse_args()
 
-    collect_announcements(args.begin_dt, args.end_dt)
+    collect(args.begin_dt, args.end_dt)

@@ -2,12 +2,14 @@
 # (PostgreSQL 문법 쪽은 실제 DB에서 `python -m app.collect`를 두 번 돌려 확인한다)
 
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import func, select
 
-from app.models import BidAnnouncement
+from app.models import BidAnnouncement, BidResult
 from app.repository import bid_repo
 from app.transformer.announcement import to_announcement_row
+from app.transformer.result import pick_final_results, to_result_row
 
 
 def make_row(no: str, ord_: str = "000", name: str = "테스트 공사", **extra) -> dict:
@@ -75,6 +77,70 @@ def test_묶음_크기보다_많으면_나눠서_보낸다(session, monkeypatch)
 def test_빈_목록이면_아무것도_안_한다(session):
     assert bid_repo.upsert_announcements(session, []) == 0
     assert count(session) == 0
+
+
+def result_row(no: str, ord_: str = "000", rate: str | None = "90.123", winner: str = "OO건설") -> dict:
+    return {
+        "bid_ntce_no": no, "bid_ntce_ord": ord_, "bidwinnr_nm": winner,
+        "sucsfbid_amt": 1000, "sucsfbid_rate": None if rate is None else Decimal(rate),
+        "prtcpt_cnum": 3, "rl_openg_dt": None, "fnl_sucsf_date": None,
+    }
+
+
+def test_낙찰결과는_번호와_차수가_같은_공고에_붙는다(session):
+    bid_repo.upsert_announcements(session, [make_row("A1", "000"), make_row("A1", "001")])
+    session.flush()
+
+    saved, skipped = bid_repo.upsert_results(session, [result_row("A1", "001")])
+    session.commit()
+
+    assert (saved, skipped) == (1, 0)
+    corrected = session.scalars(select(BidAnnouncement).where(BidAnnouncement.bid_ntce_ord == "001")).one()
+    original = session.scalars(select(BidAnnouncement).where(BidAnnouncement.bid_ntce_ord == "000")).one()
+    assert corrected.result.sucsfbid_rate == Decimal("90.123")
+    assert original.result is None  # 1:0..1 ─ 결과 없는 공고는 None
+
+
+def test_낙찰결과를_두_번_저장해도_하나이고_새_값으로_고친다(session):
+    bid_repo.upsert_announcements(session, [make_row("A1")])
+    bid_repo.upsert_results(session, [result_row("A1", winner="처음")])
+    session.commit()
+
+    bid_repo.upsert_results(session, [result_row("A1", winner="나중")])
+    session.commit()
+    session.expire_all()
+
+    assert session.scalar(select(func.count()).select_from(BidResult)) == 1
+    assert session.scalars(select(BidResult.bidwinnr_nm)).one() == "나중"
+
+
+def test_공고가_없는_낙찰결과는_건너뛴다(session):
+    bid_repo.upsert_announcements(session, [make_row("A1")])
+
+    saved, skipped = bid_repo.upsert_results(session, [result_row("A1"), result_row("ZZZ")])
+    session.commit()
+
+    assert (saved, skipped) == (1, 1)
+
+
+def test_낙찰률이_없는_결과도_저장한다(session):
+    bid_repo.upsert_announcements(session, [make_row("A1")])
+    bid_repo.upsert_results(session, [result_row("A1", rate=None)])
+    session.commit()
+
+    assert session.scalars(select(BidResult.sucsfbid_rate)).one() is None
+
+
+def test_실제_응답_낙찰결과를_공고에_연결(session, real_results_page):
+    # 실제 응답의 공고번호로 공고를 먼저 만들고, 결과 3건이 전부 붙는지
+    items = real_results_page["response"]["body"]["items"]
+    bid_repo.upsert_announcements(session, [make_row(i["bidNtceNo"], i["bidNtceOrd"]) for i in items])
+
+    saved, skipped = bid_repo.upsert_results(session, [to_result_row(i) for i in pick_final_results(items)])
+    session.commit()
+
+    assert (saved, skipped) == (3, 0)
+    assert session.scalar(select(func.count()).select_from(BidResult)) == 3
 
 
 def test_fetched_at은_저장할_때_채운다(session):

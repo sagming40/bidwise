@@ -46,6 +46,15 @@ def real_announcements_page() -> dict:
 
 
 @pytest.fixture
+def real_results_page() -> dict:
+    """
+    낙찰정보 API 실제 응답 원문 (2026-10-20 공고분, 72건 중 3건: 보통 / 정수 낙찰률 "90" / 빈 낙찰률 "").
+    쓰지 않는 개인정보성 필드(대표자명·주소·전화·사업자번호·담당자)는 비워서 저장했다.
+    """
+    return json.loads((FIXTURES_DIR / "results_real.json").read_text(encoding="utf-8"))
+
+
+@pytest.fixture
 def session():
     """
     테이블을 만들어 둔 임시 SQLite 세션. 테이블 구조는 마이그레이션 테스트가 models.py와 같다는 걸 보장하므로

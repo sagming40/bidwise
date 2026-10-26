@@ -44,6 +44,24 @@ def test_인증키는_params로_넘긴다(monkeypatch, announcements_page):
     assert calls[0]["inqryBgnDt"] == "202609010000"
 
 
+def test_낙찰정보는_공고일시_기준으로_조회한다(monkeypatch, real_results_page):
+    # 낙찰정보의 inqryDiv=1은 "결과 등록일"이라 같은 기간의 공고와 안 맞는다. 2(공고일시)여야 한다.
+    calls = []
+
+    def fake_get(url, params, timeout):
+        calls.append((url, params))
+        return FakeResponse(real_results_page)
+
+    monkeypatch.setattr(client.requests, "get", fake_get)
+
+    items = client.fetch_all_results("202610200000", "202610202359")
+
+    url, params = calls[0]
+    assert "/as/ScsbidInfoService/getScsbidListSttusCnstwk" in url
+    assert params["inqryDiv"] == "2"
+    assert len(items) == 3
+
+
 def test_resultCode가_00이_아니면_예외(monkeypatch):
     error_payload = {"response": {"header": {"resultCode": "03", "resultMsg": "NODATA_ERROR"}}}
     monkeypatch.setattr(client.requests, "get", lambda url, params, timeout: FakeResponse(error_payload))
