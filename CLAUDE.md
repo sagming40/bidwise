@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 이 저장소에서 일하는 Claude가 지키는 공통 규칙이다.
-세션끼리는 기억을 공유하지 않고, 기기도 3대(노트북·집 데스크탑·학교 PC)라서 **저장소가 공용 노트**다. 이 파일과 문서들이 기억 역할을 한다.
+세션끼리는 기억을 공유하지 않고, 기기도 4대(노트북·집 데스크탑·학교 PC·회사 PC)라서 **저장소가 공용 노트**다. 이 파일과 문서들이 기억 역할을 한다.
 
 BidWise: 나라장터 공사 입찰 데이터를 수집해서 지역별·공종별 낙찰률을 지도와 차트로 보여 주는 대시보드. 학습 프로젝트다.
 
@@ -48,19 +48,21 @@ BidWise: 나라장터 공사 입찰 데이터를 수집해서 지역별·공종�
 
 ## 함정 (고치기 전에 확인)
 - **인증키**: `requests`의 `params`로 넘기므로 `.env`에는 `%`가 없는 원본 키를 넣는다. 인코딩된 키(`%3D` 등)는 이중 인코딩되어 인증에 실패한다
-- **트래픽 한도**: 서비스별 하루 1,000건, **기기 3대 합산**(인증키 기준). 실제 API 호출은 꼭 필요할 때만, `numOfRows`는 크게. 반복 검증은 저장해 둔 응답 JSON으로
+- **트래픽 한도**: 서비스별 하루 1,000건, **기기 4대 합산**(인증키 기준). 실제 API 호출은 꼭 필요할 때만, `numOfRows`는 크게. 반복 검증은 저장해 둔 응답 JSON으로
 - **공고 유일성**: `bidNtceNo`만으로는 유일하지 않다. 정정공고는 `bidNtceOrd`만 오른다 → `(bid_ntce_no, bid_ntce_ord)` 기준
 - **낙찰결과는 0개일 수 있다**: 개찰 전·유찰 공고는 낙찰정보에 행이 없다. 에러로 처리하지 말고, 집계는 `LEFT JOIN`
 - **응답의 빈 값**: 결과가 0건이면 `items`가 리스트가 아니라 빈 문자열로 온다. 필드의 `""`는 `None`으로 바꾼다
 - **타입**: 금액은 `BIGINT`, 낙찰률은 `NUMERIC(6,3)` (`FLOAT` 금지)
 - **PostgreSQL 15+**: 새 DB 유저는 `public` 스키마 CREATE 권한이 없다 → `GRANT ALL ON SCHEMA public TO <유저>;`
+- **Claude의 Bash 도구는 외부 API에 못 붙는다** (`apis.data.go.kr` 연결 시간 초과). 실제 API 호출은 PowerShell로 한다
+- **한글 출력**: 콘솔에 깨져 보여도 데이터는 정상일 수 있다. 파이썬 출력은 `-X utf8`로 (`-I`는 `PYTHONIOENCODING`을 무시)
 
 ## 하지 말 것
 - `.env`, API 키를 커밋하지 않는다
 - `alembic.ini`에 한글을 쓰지 않는다 (Windows에서 cp949로 읽어서 `UnicodeDecodeError`가 난다). DB 주소도 넣지 않는다 (`alembic/env.py`가 `.env`에서 읽음)
 - `backend/scratch/`(버리는 검증 스크립트, gitignore 대상)에 남겨야 할 코드를 두지 않는다. 남길 코드는 `app/`이나 `tests/`로
 
-## 기기 3대
+## 기기 4대
 - 코드는 GitHub로 주고받는다 (`git pull` → 작업 → `git push`)
 - `.env`와 DB 데이터는 git에 없으므로 기기마다 따로 준비한다 (`.env.example` 참고). 한 기기에서 수집한 데이터는 다른 기기에 없다
 - DB 구조는 Alembic으로 맞춘다: `git pull` 후 항상 `alembic upgrade head`
@@ -76,5 +78,6 @@ BidWise: 나라장터 공사 입찰 데이터를 수집해서 지역별·공종�
 pip install -r requirements.txt
 alembic upgrade head; alembic check   # 마이그레이션 적용, 모델과 차이 없는지 확인
 pytest                           # 테스트 (임시 SQLite·가짜 응답, 실제 DB·API 안 씀)
+python -m app.collect 202610200000 202610202359   # 입찰공고 수동 수집 (실제 API 호출 — 한도 주의)
 psql -U bidwise_app -d bidwise -c "\dt"   # 테이블 확인
 ```

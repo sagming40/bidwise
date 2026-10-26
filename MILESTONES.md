@@ -100,9 +100,11 @@ psql에서 \dt 를 쳤을 때 bid_announcements, bid_results 두 테이블이 �
 - [x] 나라장터 API 클라이언트 작성 — 입찰공고 (2026-09-12)
 - [ ] 나라장터 API 클라이언트 작성 — 낙찰정보
 - [x] 페이징 처리 — `numOfRows`, `pageNo` 반복으로 전체 수집 (2026-09-13, 20페이지 실측 검증)
-- [ ] `bid_ntce_no` + `bid_ntce_ord` 기준 UPSERT (중복 수집해도 행이 늘지 않게) — `repository/bid_repo.py`에 작성
+- [x] `bid_ntce_no` + `bid_ntce_ord` 기준 UPSERT (중복 수집해도 행이 늘지 않게) — `repository/bid_repo.py`에 작성 (2026-10-26, 실제 DB에서 2회 실행 571행 불변)
 - [ ] 두 API 결과를 `bid_ntce_no`로 연결해 저장
-- [ ] 날짜 문자열 → `datetime` 변환, 금액 문자열 → `int` 변환
+- [x] 날짜 문자열 → `datetime` 변환, 금액 문자열 → `int` 변환 — 입찰공고 (2026-10-26, `transformer/announcement.py`)
+- [ ] 같은 변환 — 낙찰정보 (낙찰률 → `Decimal`, 최종낙찰일자 → `date` 포함)
+- [x] 수동 실행 스크립트 — `python -m app.collect <시작> <끝>` (2026-10-26)
 - [ ] ~~APScheduler로 일 1회 자동 실행 설정~~ → M3 이후로 이동. 관통 전까지는 수동 실행 스크립트로 충분
 
 #### 재정비 — 기반 코드 정리 (2026-10-24 추가, UPSERT 전에 먼저)
@@ -116,7 +118,7 @@ psql에서 \dt 를 쳤을 때 bid_announcements, bid_results 두 테이블이 �
 - [x] `print` → `logging`, `requirements.txt` 버전 고정 (드라이버 psycopg2 → psycopg 3)
 - [x] pytest — 가짜 응답으로 클라이언트 6개, 임시 SQLite로 마이그레이션 2개 (2026-10-24)
 - [x] 실제 PostgreSQL에서 확인 — `alembic stamp 0001` → `alembic check` 차이 없음 (2026-10-24, `D:\_dev` 기기. 다른 두 기기는 각자 진행)
-- [ ] 테스트용 응답 JSON을 실제 API 응답 원문으로 교체 (지금은 뼈대만 본뜬 예시)
+- [x] 테스트용 응답 JSON을 실제 API 응답 원문으로 교체 — 입찰공고 실제 응답 3건을 `announcements_real.json`으로 추가 (2026-10-26). 정정공고 테스트용 `announcements_page.json`은 같은 번호·다른 차수 쌍을 담으려고 예시로 남김
 
 **완료 기준**
 ```
@@ -256,7 +258,7 @@ Swagger(/docs)에서 summary API를 호출해 200 응답을 확인할 수 있다
 |---|---|---|
 | 설계 (문서 6종 + Figma 목업) | ✅ 완료 | 2026-09-11 |
 | M0 개발 환경 · DB 구축 | ✅ 완료 | 2026-09-12 |
-| M1 데이터 수집 파이프라인 | 🟡 진행 중 — 입찰공고 클라이언트·페이징 완료, 2026-10-24 재정비 후 UPSERT부터 재개 | |
+| M1 데이터 수집 파이프라인 | 🟡 진행 중 — 입찰공고 수집·변환·UPSERT 완료 (2026-10-26), 낙찰정보 쪽 남음 | |
 | M2 정제 · 분석 로직 | ⬜ 예정 | |
 | M3 조회 API + 첫 화면 | ⬜ 예정 | |
 | M4 대시보드 전체 구현 | ⬜ 예정 | |

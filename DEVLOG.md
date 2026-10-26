@@ -60,10 +60,10 @@
 | 항목 | 내용 |
 |---|---|
 | 마지막 완료 마일스톤 | **M0 개발 환경 · DB 구축 ✅** (2026-09-12) |
-| 진행 중 | **M1 데이터 수집** — 입찰공고 클라이언트·페이징 완료, UPSERT부터 남음 (2026-09-13 이후 중단) |
-| 다음 작업 | M1 UPSERT 재개 (`repository/bid_repo.py`) |
-| 최근 커밋 | `refactor: 기반 코드 정리 — 설정·DB 연결 분리, Alembic, SQLAlchemy 2.0 모델` (2026-10-24) |
-| 다른 기기에서 할 일 | 노트북·학교 PC(아직 안 함): `pip install -r requirements.txt` → M0 테이블이 있으면 `alembic stamp 0001`, 없으면 `alembic upgrade head` → `alembic check`. `D:\_dev` 기기는 2026-10-24 완료 |
+| 진행 중 | **M1 데이터 수집** — 입찰공고 수집 → 변환 → UPSERT 완료 (2026-10-26). 낙찰정보 쪽이 남음 |
+| 다음 작업 | 낙찰정보 클라이언트 (`client.py`에 `getScsbidListSttusCnstwk`) → 변환 → `bid_results` UPSERT → 공고와 연결 |
+| 최근 커밋 | `feat(M1): 입찰공고 변환·UPSERT, 수동 수집 스크립트` (2026-10-26) |
+| 다른 기기에서 할 일 | 노트북·학교 PC(아직 안 함): `pip install -r requirements.txt` → M0 테이블이 있으면 `alembic stamp 0001`, 없으면 `alembic upgrade head` → `alembic check`. `D:\_dev` 기기는 2026-10-24, 회사 PC(`C:\_dev`)는 2026-10-26 기준 `0001 (head)` 확인 |
 
 ### 환경 요약
 
@@ -75,13 +75,65 @@
 | Frontend | React + TypeScript + shadcn/ui (M3에서 생성 예정, 변동 없음) |
 | 시각화 | Recharts(일반 차트), ECharts(지역 지도) — M4에서 연동 예정, 변동 없음 |
 | 외부 API 인증키 | 2026-09-12 재발급, `backend/.env`에 저장. `requests`의 `params`로 넘겨 호출 정상 확인 |
-| 작업 기기 | 노트북 · 집 데스크탑 · 학교 PC — **DB와 `.env`는 기기마다 별개** (git으로 따라오지 않음) |
+| 작업 기기 | 노트북 · 집 데스크탑 · 학교 PC · 회사 PC(2026-10-26 추가) — **DB와 `.env`는 기기마다 별개** (git으로 따라오지 않음) |
 
 ---
 
 ## 기록
 
 <!-- 최신 항목을 위에 추가한다 -->
+
+---
+
+## 2026-10-26 (월) — M1: 입찰공고 변환 · UPSERT (회사 PC)
+
+### [DB] 입찰공고 UPSERT — `(bid_ntce_no, bid_ntce_ord)` 기준 `ON CONFLICT DO UPDATE`
+
+**결정**
+- `app/transformer/announcement.py`: API 원본(전부 문자열) → DB 행. `""` → `None`, 금액 → `int`(Decimal 경유), 일시 → `datetime`(KST 그대로)
+  - 모르는 날짜 형식은 `None`으로 덮지 않고 `ValueError` — 조용히 비우면 기간 필터에서 공고가 사라져도 모른다
+- `app/repository/bid_repo.py`: `upsert_announcements(session, rows)`. 이미 있는 공고는 나머지 컬럼과 `fetched_at`만 갱신하고 **`id`는 그대로** → 나중에 붙일 낙찰결과(`announcement_id`) 연결이 안 끊긴다. commit은 부르는 쪽이 한다
+  - 한 묶음 안에 같은 키가 두 번 있으면 PostgreSQL이 `cannot affect row a second time`으로 묶음 전체를 거절한다 → 키가 같으면 나중 것만 남긴다
+  - 1,000행씩 나눠 보낸다 (문장 하나에 파라미터 65,535개 제한)
+  - 실제 DB는 PostgreSQL, 테스트는 SQLite라 연결된 DB에 맞는 `insert`를 고른다 (두 DB 모두 `on_conflict_do_update` 문법이 같다)
+- `app/collect.py`: 수집 → 변환 → 저장을 잇는 수동 실행 스크립트. `python -m app.collect 202610200000 202610202359`
+- pytest 21개 (변환 6, UPSERT 7 추가). 테스트용 응답에 **실제 응답 원문**(`tests/fixtures/announcements_real.json`, 3건, 필드 143개 그대로)을 추가했다
+
+**실제 PostgreSQL 검증** (회사 PC, 2026-10-20 하루치)
+- 1회차: 받은 571건 → 테이블 571행. 2회차: 같은 기간 다시 → **571행 그대로** (M1 완료 기준의 UPSERT 항목)
+- `id` 1~571 그대로, `fetched_at`은 전부 2회차 시각으로 갱신 (UTC 02:08 = KST 11:08, 9시간 어긋남 없음)
+- 빈 문자열로 저장된 값 0건, 최대 예산 4,506억 원 (`INTEGER` 최대 약 21억 → `BIGINT`가 맞았다)
+- 정정공고: 같은 번호에 차수 `000,001,002`나 `003,004,005`(이전 차수는 다른 날 공고)처럼 여러 행
+- 오늘 입찰공고정보서비스 호출: 7건 (필드 확인 1 + 수집 3×2)
+
+### [외부API] `mainCnsttyNm`이 비는 조건은 "수의계약이냐"와 정확히 일치하지 않는다
+
+**증상**
+`02_erd.md` 5.2절은 "적격심사를 거치는 경쟁입찰에만 채워지고 수의계약에서는 비어 있다"고 적었는데, 하루치 571건을 계약방법별로 세어 보니 예외가 있었다.
+
+| 계약방법 | 건수 | `main_cnstty_nm` 있음 |
+|---|---|---|
+| 수의계약 | 417 | 8 |
+| 제한경쟁 | 138 | 125 |
+| 일반경쟁 | 11 | 10 |
+| 지명경쟁 · 제한경쟁(n등급) | 5 | 5 |
+
+**원인**
+경향은 맞지만 규칙은 아니다. 2026-09-11 실측은 3건으로 본 것이라 예외가 안 보였다.
+
+**해결**
+M2 분류 로직은 계약방법을 보지 않고 **값이 있는지만** 본다 (원래 설계대로). 이 표는 근거로 남긴다.
+전체의 **74%(423/571)가 비어 있어서** 키워드 폴백(M2)이 사실상 주 분류 경로가 된다 — 키워드 규칙의 품질이 공종별 차트의 품질을 좌우한다.
+
+**배운 것**
+3건으로 확인한 규칙은 "가설"이다. 데이터가 쌓이면 `GROUP BY`로 다시 세어 본다.
+
+### [환경설정] 회사 PC 추가 — 기기 4대
+
+- 작업 기기에 회사 PC(`C:\_dev\bidwise`)가 늘었다. Python 3.14, PostgreSQL에 `0001 (head)`까지 적용되어 있었다
+- 트래픽 한도(인증키 기준 하루 1,000건)는 이제 **4대 합산**이다
+- Claude Code의 Bash 도구에서는 `apis.data.go.kr` 연결이 시간 초과된다(도구의 네트워크 제한). PowerShell에서는 된다 → 실제 API 호출은 PowerShell로
+- 콘솔에 한글이 깨져 보여도 데이터는 정상이었다(저장된 JSON·DB 값 확인). `python -I`는 `PYTHONIOENCODING`을 무시하므로 `-X utf8`을 쓴다
 
 ---
 

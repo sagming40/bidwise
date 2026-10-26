@@ -219,12 +219,14 @@ bidwise/
 │   │   ├── models.py           # SQLAlchemy ORM 모델 (ERD 구현체)
 │   │   ├── database.py         # DB 연결 · 세션 관리
 │   │   ├── schemas.py          # Pydantic 요청/응답 스키마
+│   │   ├── collect.py          # 수집→정제→저장 수동 실행 (2026-10-26 추가, 스케줄러도 이걸 부른다)
 │   │   │
 │   │   ├── collector/          # [Extract] API 호출
 │   │   │   ├── client.py       # 나라장터 API 클라이언트
 │   │   │   └── scheduler.py    # APScheduler 설정
 │   │   │
 │   │   ├── transformer/        # [Transform] 정제
+│   │   │   ├── announcement.py # API 필드 → DB 컬럼, 타입 변환 (2026-10-26 추가)
 │   │   │   ├── region.py       # 지역명 정규화
 │   │   │   └── category.py     # 공사종류 분류 (폴백 포함)
 │   │   │
