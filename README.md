@@ -2,7 +2,7 @@
 
 > 조달청 나라장터 공사 입찰 데이터를 수집·분석해, 지역별·공종별 낙찰 경향을 지도와 차트로 조망하는 웹 대시보드
 
-[![상태](https://img.shields.io/badge/상태-M2%20정제·분석%20준비-F2C12E)](./MILESTONES.md)
+[![상태](https://img.shields.io/badge/상태-M3%20조회%20API%20준비-F2C12E)](./MILESTONES.md)
 [![백엔드](https://img.shields.io/badge/backend-Python%20·%20FastAPI-3776AB)](#기술-스택)
 [![DB](https://img.shields.io/badge/database-PostgreSQL-336791)](#기술-스택)
 [![프론트](https://img.shields.io/badge/frontend-React%20·%20TypeScript-61DAFB)](#기술-스택)
@@ -144,7 +144,7 @@ erDiagram
 | 기능 | 상태 | 설명 |
 |---|---|---|
 | 나라장터 데이터 자동 수집 | 🟡 수동 수집 완료 | 두 API를 `(bid_ntce_no, bid_ntce_ord)`로 연결, 일 1회 스케줄링 — 수동 수집·연결까지 완료, 스케줄링은 M3 이후 |
-| 지역·공종 정제 및 분류 | ⬜ 예정 | 지역명 정규화, 공종 2단계 폴백 분류 |
+| 지역·공종 정제 및 분류 | ✅ 완료 | 16개 시/도로 정규화, 공종 대분류 11개 · 2단계 폴백, 재분류 명령 |
 | 요약 통계 대시보드 | ⬜ 예정 | 전체 공고 수 · 평균 낙찰률 · 예산 규모 |
 | 지역별 낙찰률 지도 | ⬜ 예정 | ECharts 코로플레스, 5단계 블루 스케일 |
 | 공종별 낙찰률 차트 | ⬜ 예정 | Recharts 막대그래프, 분류 신뢰도 배지 포함 |
@@ -157,10 +157,13 @@ erDiagram
 나라장터가 제공하는 `mainCnsttyNm`(주공종명)은 **적격심사를 거치는 경쟁입찰에만 채워진다.** 수의계약 건에서는 비어 있다는 것을 API 응답으로 직접 확인했다.
 
 ```
-1차: main_cnstty_nm 값이 있으면 그대로 사용      → source: main_cnstty
-2차: 비어 있으면 공고명에서 키워드로 추정 분류      → source: keyword
-실패: 어느 쪽으로도 분류 불가                      → source: none
+1차: main_cnstty_nm(면허 업종 47종)이 있으면 대분류 11개로 묶어 사용   → source: main_cnstty
+2차: 비어 있으면 공고명에서 키워드로 대분류 추정                        → source: keyword
+실패: 어느 쪽으로도 분류 불가                                          → source: none
 ```
+
+대분류: 건축 · 토목 · 전기 · 통신 · 기계설비 · 소방 · 조경 · 산림 · 환경 · 국가유산 · 기타.
+업종이 있는 공고를 정답지로 재 보면 키워드 추정의 정확도는 약 79%다 (2026-10-26, 공고 1만 건 기준).
 
 분류 방식에 따라 정확도가 다르므로, API 응답에 `source` 필드를 포함하고 화면에서도 배지로 구분한다. 정확도가 다른 데이터를 같은 얼굴로 보여주면 사용자가 과신하게 되기 때문이다.
 
@@ -224,7 +227,7 @@ flowchart LR
 
 ## 실행 방법
 
-> ⚠️ **M1(데이터 수집)까지 끝났고, M2(정제·분석) 전입니다.** 지금 실행할 수 있는 것은 DB 테이블 생성과 입찰공고·낙찰결과 수동 수집까지이고, API 서버(`uvicorn`)는 M3, 프론트엔드는 M3 이후에 생깁니다.
+> ⚠️ **M2(정제·분석)까지 끝났고, M3(조회 API) 전입니다.** 지금 실행할 수 있는 것은 DB 테이블 생성, 입찰공고·낙찰결과 수동 수집, 재분류까지이고, API 서버(`uvicorn`)는 M3, 프론트엔드는 M3 이후에 생깁니다.
 
 ### 사전 요구사항
 
@@ -247,6 +250,7 @@ cp .env.example .env
 alembic upgrade head            # 테이블 생성 (마이그레이션 적용)
 pytest                          # 테스트 (실제 DB·API를 쓰지 않음)
 python -m app.collect 202610200000 202610202359   # 입찰공고·낙찰결과 수동 수집 (기간: YYYYMMDDHHMM)
+python -m app.reclassify        # 분류 규칙을 고친 뒤 저장된 공고 다시 분류 (API 호출 없음)
 uvicorn main:app --reload       # http://localhost:8000/docs  (M3 이후)
 ```
 

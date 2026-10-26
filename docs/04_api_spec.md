@@ -216,6 +216,8 @@ GROUP BY a.region_normalized
 ORDER BY total_count DESC;
 ```
 
+> (2026-10-26 M2에서 추가됨. 지역은 16개 — 광주·전남은 `전남광주` 하나. 쿼리는 `bid_repo.get_region_stats`)
+>
 > `region_normalized`는 아직 확정되지 않은 컬럼이다.
 > `02_erd.md` 미결정 사항의 "지역 정규화 결과를 별도 컬럼으로 둘지"와 직결된다.
 > 이 쿼리를 보면 **별도 컬럼으로 두는 편이 훨씬 낫다**는 게 드러난다.
@@ -488,3 +490,4 @@ JavaScript 관습은 camelCase지만, 여기서는 **DB 컬럼명 → API 필드
 - [ ] 프론트엔드에서 snake_case를 그대로 쓸지, camelCase로 변환할지
 - [ ] `/api/stats/trend` (시계열 추이) 엔드포인트 — 확장 기능이므로 이번 명세에서는 제외
 - [ ] 응답 캐싱 여부 (같은 파라미터의 반복 요청 처리)
+- [ ] `/api/stats/category`의 `source`를 어떻게 줄지 — 3.3절 예시는 항목마다 `source` 하나지만, 실제로는 한 대분류 안에 업종 분류와 키워드 추정이 섞인다 (예: 토목 2,842건 중 추정 2,267건, 2026-10-26). 지금 집계 쿼리는 추정 건수(`keyword_count`)를 준다. 항목별 추정 비율로 바꿀지 M4 전에 정한다

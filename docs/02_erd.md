@@ -128,11 +128,15 @@ erDiagram
 | `bid_ntce_dt` | TIMESTAMP | Y | `bidNtceDt` | 입찰공고일시. 기간 필터 및 시계열 분석 기준 |
 | `openg_dt` | TIMESTAMP | Y | `opengDt` | 개찰일시. 이 시점이 지나야 낙찰결과가 생긴다 |
 | `fetched_at` | TIMESTAMP | N | — | 수집 메타데이터. 언제 이 레코드를 API에서 가져왔는지 기록 |
+| `region_normalized` | VARCHAR(20) | Y | — | **M2 추가.** 시/도 짧은 이름(`서울`, `전남광주` …, 16개). `cnstrtsite_rgn_nm` 첫 단어에서 계산 |
+| `category` | VARCHAR(20) | Y | — | **M2 추가.** 공종 대분류 11개 중 하나. 분류 못하면 NULL (5.2절) |
+| `category_source` | VARCHAR(20) | Y | — | **M2 추가.** `main_cnstty` / `keyword` / `none` — 분류 출처 |
 
 **제약조건**
 - `UNIQUE (bid_ntce_no, bid_ntce_ord)` — 중복 수집 방지의 핵심. 같은 공고를 다시 수집해도 중복 행이 생기지 않는다
 - `INDEX (cnstrtsite_rgn_nm)` — 지역별 GROUP BY가 잦으므로 인덱스
 - `INDEX (bid_ntce_dt)` — 기간 필터가 잦으므로 인덱스
+- `INDEX (region_normalized)` — 지역별 집계·필터 기준 (M2, 마이그레이션 0002)
 
 ---
 
@@ -200,6 +204,11 @@ erDiagram
 > 분류 결과를 별도 컬럼(`cnstty_category` 등)으로 저장할지, 조회 시점에 계산할지는
 > 아직 미결정. 수집 시점에 저장해두면 조회가 빠르지만, 분류 규칙을 고칠 때마다
 > 전체 데이터를 다시 처리해야 한다.
+>
+> → 2026-10-26 구현: `category`·`category_source` 컬럼에 저장하고, 규칙을 고치면 `python -m app.reclassify`로 다시 처리한다.
+> `main_cnstty_nm`은 실제로는 **면허 업종 47종**이라 "그대로 사용"하지 않고 **대분류 11개**
+> (건축·토목·전기·통신·기계설비·소방·조경·산림·환경·국가유산·기타)로 묶는다. 키워드 추정도 같은 11개 중 하나를 고른다.
+> 규칙과 정확도(79.3%)는 `backend/app/transformer/category.py`와 DEVLOG 2026-10-26 참고.
 
 ### 5.3 낙찰률을 저장만 하고 계산하지 않는 이유
 
