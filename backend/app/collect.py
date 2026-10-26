@@ -11,11 +11,12 @@ from datetime import datetime, timedelta
 
 from sqlalchemy import func, select
 
-from app.collector.client import fetch_all_announcements, fetch_all_results
+from app.collector.client import fetch_all_announcements, fetch_all_license_limits, fetch_all_results
 from app.database import get_session
 from app.models import BidAnnouncement, BidResult
 from app.repository.bid_repo import upsert_announcements, upsert_results
 from app.transformer.announcement import to_announcement_row
+from app.transformer.license import first_license_by_announcement
 from app.transformer.result import pick_final_results, to_result_row
 
 logger = logging.getLogger(__name__)
@@ -38,8 +39,13 @@ def collect(begin_dt: str, end_dt: str) -> dict:
     """
     announcement_items = fetch_all_announcements(begin_dt, end_dt, num_of_rows=NUM_OF_ROWS)
     result_items = fetch_all_results(begin_dt, end_dt, num_of_rows=NUM_OF_ROWS)
+    # 공종 분류 2차 출처. 하루치가 999건씩 2~3번 (2026-10-26 추가)
+    licenses = first_license_by_announcement(fetch_all_license_limits(begin_dt, end_dt))
 
-    announcement_rows = [to_announcement_row(item) for item in announcement_items]
+    announcement_rows = [
+        to_announcement_row(item, licenses.get((item["bidNtceNo"], item.get("bidNtceOrd") or "000")))
+        for item in announcement_items
+    ]
     result_rows = [to_result_row(item) for item in pick_final_results(result_items)]
 
     with get_session() as session:

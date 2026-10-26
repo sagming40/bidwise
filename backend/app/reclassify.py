@@ -30,7 +30,7 @@ def reclassify() -> dict:
         sources = Counter()
         unknown_regions = 0
         for row in rows:
-            new = classification_of(row.cnstrtsite_rgn_nm, row.main_cnstty_nm, row.bid_ntce_nm)
+            new = classification_of(row.cnstrtsite_rgn_nm, row.main_cnstty_nm, row.lcns_lmt_nm, row.bid_ntce_nm)
             sources[new["category_source"]] += 1
             unknown_regions += new["region_normalized"] is None
             if any(getattr(row, col) != new[col] for col in CLASSIFICATION_COLUMNS):

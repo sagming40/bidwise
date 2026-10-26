@@ -54,6 +54,11 @@ class BidAnnouncement(Base):
 
     cntrct_ccncls_mthd_nm: Mapped[str | None] = mapped_column(String(500))  # 계약체결방법 ─ main_cnstty_nm이 비어있는 이유를 설명해줌
 
+    # 면허제한정보의 첫 번째 면허 이름 (2026-10-26 추가, 마이그레이션 0003). 공종 분류의 2차 출처.
+    # 수의계약처럼 main_cnstty_nm이 빈 공고도 87%는 여기에 업종이 있다 (DEVLOG 2026-10-26 사전 검증).
+    # 원본으로 저장해 두어야 분류 규칙을 고쳤을 때 API를 다시 부르지 않고 재분류할 수 있다.
+    lcns_lmt_nm: Mapped[str | None] = mapped_column(String(200))
+
     # 금액은 BIGINT. 수백억짜리 공사가 있어서 INTEGER 범위(약 21억)를 넘을 수 있음
     bdgt_amt: Mapped[int | None] = mapped_column(BigInteger)
     presmpt_prce: Mapped[int | None] = mapped_column(BigInteger)
@@ -71,7 +76,7 @@ class BidAnnouncement(Base):
     region_normalized: Mapped[str | None] = mapped_column(String(20))
     # 공종 대분류 ("건축", "토목" … "기타"). 분류 못하면 NULL
     category: Mapped[str | None] = mapped_column(String(20))
-    # 분류 출처 ─ main_cnstty(업종으로 분류) / keyword(공고명으로 추정) / none(분류 못함). 화면의 "추정" 배지 근거
+    # 분류 출처 ─ main_cnstty(업종) / license(면허제한) / keyword(공고명으로 추정) / none(분류 못함). 화면의 "추정" 배지 근거
     category_source: Mapped[str | None] = mapped_column(String(20))
 
     # 1:0..1 관계의 "1"쪽. 낙찰결과 하나(또는 0개)를 들여다볼 수 있는 창문

@@ -58,13 +58,29 @@ def test_다리와_학교를_구분한다(title, expected):
 
 def test_업종이_있으면_업종이_먼저():
     # 공고명은 소방처럼 보여도 업종이 전기면 전기 (공식 분류를 믿는다)
-    assert classify("전기공사업", "소방 수신기 교체공사") == ("전기", "main_cnstty")
+    assert classify("전기공사업", None, "소방 수신기 교체공사") == ("전기", "main_cnstty")
 
 
 def test_업종이_없으면_키워드():
-    assert classify(None, "마을안 도로 포장공사") == ("토목", "keyword")
+    assert classify(None, None, "마을안 도로 포장공사") == ("토목", "keyword")
 
 
 def test_둘_다_안_되면_none():
-    assert classify(None, "부안군 공고 제2026-1594호") == (None, "none")
-    assert classify(None, None) == (None, "none")
+    assert classify(None, None, "부안군 공고 제2026-1594호") == (None, "none")
+    assert classify(None, None, None) == (None, "none")
+
+
+def test_업종이_없으면_면허가_키워드보다_먼저():
+    # 공고명은 토목처럼 보여도 면허가 전기면 전기 (면허는 업종과 96.4% 일치, 키워드는 79%)
+    assert classify(None, "전기공사업", "마을안 도로 포장공사") == ("전기", "license")
+
+
+def test_업종이_있으면_면허보다_업종():
+    assert classify("건축공사업", "전기공사업", "청사 신축") == ("건축", "main_cnstty")
+
+
+def test_면허가_기타면_키워드를_먼저_본다():
+    # "어장정화ㆍ정비업"처럼 대분류에 안 맞는 면허는 공고명이 더 많은 걸 말해 준다
+    assert classify(None, "어장정화ㆍ정비업", "OO항 방파제 보수공사") == ("토목", "keyword")
+    # 공고명으로도 못 정하면 면허의 "기타"라도 쓴다
+    assert classify(None, "어장정화ㆍ정비업", "부안군 공고 제2026-1594호") == ("기타", "license")

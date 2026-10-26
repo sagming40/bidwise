@@ -118,10 +118,23 @@ def get_classification_inputs(session: Session) -> list:
         BidAnnouncement.id,
         BidAnnouncement.cnstrtsite_rgn_nm,
         BidAnnouncement.main_cnstty_nm,
+        BidAnnouncement.lcns_lmt_nm,
         BidAnnouncement.bid_ntce_nm,
         *(getattr(BidAnnouncement, col) for col in CLASSIFICATION_COLUMNS),
     )
     return list(session.execute(stmt))
+
+
+def update_license_names(session: Session, licenses: dict[tuple[str, str], str]) -> int:
+    """
+    {(공고번호, 차수): 첫 면허 이름}으로 이미 저장된 공고의 lcns_lmt_nm만 채운다 (백필용).
+    DB에 없는 공고의 면허는 무시한다. 반환값: 채운 공고 수
+    """
+    ids = _announcement_ids(session, set(licenses))
+    rows = [{"id": id_, "lcns_lmt_nm": licenses[key]} for key, id_ in ids.items()]
+    for start in range(0, len(rows), CHUNK_SIZE):
+        session.execute(update(BidAnnouncement), rows[start:start + CHUNK_SIZE])
+    return len(rows)
 
 
 def update_classifications(session: Session, rows: list[dict]) -> int:

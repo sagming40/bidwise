@@ -1,7 +1,11 @@
-# 이 파일의 역할 ─ 공종 분류 (2단계 폴백)
-#   1차: 업종(main_cnstty_nm)이 있으면 업종 → 대분류          source = "main_cnstty"
-#   2차: 없으면 공고명(bid_ntce_nm) 키워드로 대분류를 추정       source = "keyword"
-#   실패: 어느 쪽으로도 못 정하면 category = None              source = "none"
+# 이 파일의 역할 ─ 공종 분류 (3단계 폴백)
+#   1차: 업종(main_cnstty_nm)이 있으면 업종 → 대분류               source = "main_cnstty"
+#   2차: 없으면 면허제한정보의 첫 면허(lcns_lmt_nm) → 대분류         source = "license"
+#   3차: 그것도 없으면 공고명(bid_ntce_nm) 키워드로 대분류를 추정     source = "keyword"
+#   실패: 어느 쪽으로도 못 정하면 category = None                  source = "none"
+#
+# 2차(면허)는 2026-10-26 추가. 업종 없는 공고의 87%에 면허가 있고, 업종과 대분류가 96.4% 일치해서
+# 키워드 추정(정확도 79%)보다 먼저 본다. 업종과 같은 이름 체계라 대분류 규칙(INDUSTRY_RULES)을 그대로 쓴다.
 #
 # main_cnstty_nm은 "공종"이 아니라 면허 업종 이름 47종이다 ("건축공사업", "산림사업법인(숲가꾸기 및 병해충방제)" …).
 # 그대로 쓰면 차트 막대가 47개가 되고, 키워드 추정과 분류 체계가 어긋나서 대분류 11개로 묶는다 (DEVLOG 2026-10-26).
@@ -11,6 +15,7 @@
 import re
 
 SOURCE_MAIN_CNSTTY = "main_cnstty"
+SOURCE_LICENSE = "license"
 SOURCE_KEYWORD = "keyword"
 SOURCE_NONE = "none"
 
@@ -81,15 +86,23 @@ def category_of_title(bid_ntce_nm: str) -> str | None:
     return _first_match(bid_ntce_nm, KEYWORD_RULES)
 
 
-def classify(main_cnstty_nm: str | None, bid_ntce_nm: str | None) -> tuple[str | None, str]:
+def classify(main_cnstty_nm: str | None, lcns_lmt_nm: str | None, bid_ntce_nm: str | None) -> tuple[str | None, str]:
     """
     (category, source)를 돌려준다.
-    비유: 신분증(업종)이 있으면 신분증대로, 없으면 옷차림(공고명)을 보고 짐작하고, 짐작도 안 되면 "모름"이라고 적는다.
-    짐작한 것과 신분증을 본 것을 구분해 적어 두어야, 화면에서 "추정"이라고 정직하게 표시할 수 있다.
+    비유: 신분증(업종)이 있으면 신분증대로, 없으면 출입증(면허 조건)을 보고, 그것도 없으면 옷차림(공고명)을 보고 짐작하고,
+    짐작도 안 되면 "모름"이라고 적는다. 짐작한 것과 증명서를 본 것을 구분해 적어 두어야 화면에서 정직하게 표시할 수 있다.
     """
     if main_cnstty_nm:
         return category_of_industry(main_cnstty_nm), SOURCE_MAIN_CNSTTY
+
+    license_category = category_of_industry(lcns_lmt_nm) if lcns_lmt_nm else None
+    # 면허가 "기타"(어장정화ㆍ정비업 같은 드문 업종)면 공고명이 더 많은 걸 말해 줄 수 있어서 키워드를 먼저 본다.
+    if license_category and license_category != "기타":
+        return license_category, SOURCE_LICENSE
+
     guess = category_of_title(bid_ntce_nm or "")
     if guess:
         return guess, SOURCE_KEYWORD
+    if license_category:
+        return license_category, SOURCE_LICENSE
     return None, SOURCE_NONE

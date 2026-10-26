@@ -7,12 +7,13 @@ from app.transformer.convert import to_datetime, to_int, to_str
 from app.transformer.region import normalize_region
 
 
-def classification_of(cnstrtsite_rgn_nm: str | None, main_cnstty_nm: str | None, bid_ntce_nm: str | None) -> dict:
+def classification_of(cnstrtsite_rgn_nm: str | None, main_cnstty_nm: str | None,
+                      lcns_lmt_nm: str | None, bid_ntce_nm: str | None) -> dict:
     """
-    원본 컬럼 3개 → M2 정제 컬럼 3개. 수집할 때도, 저장된 공고를 다시 분류할 때(reclassify.py)도 이 함수 하나를 쓴다.
+    원본 컬럼 4개 → M2 정제 컬럼 3개. 수집할 때도, 저장된 공고를 다시 분류할 때(reclassify.py)도 이 함수 하나를 쓴다.
     (두 곳에서 따로 계산하면 규칙을 고칠 때 한쪽만 바뀌는 사고가 난다)
     """
-    category, source = classify(main_cnstty_nm, bid_ntce_nm)
+    category, source = classify(main_cnstty_nm, lcns_lmt_nm, bid_ntce_nm)
     return {
         "region_normalized": normalize_region(cnstrtsite_rgn_nm),
         "category": category,
@@ -20,11 +21,12 @@ def classification_of(cnstrtsite_rgn_nm: str | None, main_cnstty_nm: str | None,
     }
 
 
-def to_announcement_row(item: dict) -> dict:
+def to_announcement_row(item: dict, lcns_lmt_nm: str | None = None) -> dict:
     """
     입찰공고 API 항목 하나 → bid_announcements 행 하나.
     API 응답에는 필드가 143개 있지만, ERD(02_erd.md 4.1절)에서 고른 12개만 옮겨 담고,
-    M2 정제 결과(지역·공종) 3개를 덧붙인다. id·fetched_at은 DB와 repository가 채운다.
+    면허제한정보의 첫 면허(별도 API라 따로 받아서 넘겨준다)와 M2 정제 결과(지역·공종) 3개를 덧붙인다.
+    id·fetched_at은 DB와 repository가 채운다.
     """
     row = {
         "bid_ntce_no": item["bidNtceNo"],
@@ -41,6 +43,7 @@ def to_announcement_row(item: dict) -> dict:
         "presmpt_prce": to_int(item.get("presmptPrce")),
         "bid_ntce_dt": to_datetime(item.get("bidNtceDt")),
         "openg_dt": to_datetime(item.get("opengDt")),
+        "lcns_lmt_nm": lcns_lmt_nm,
     }
-    row.update(classification_of(row["cnstrtsite_rgn_nm"], row["main_cnstty_nm"], row["bid_ntce_nm"]))
+    row.update(classification_of(row["cnstrtsite_rgn_nm"], row["main_cnstty_nm"], lcns_lmt_nm, row["bid_ntce_nm"]))
     return row

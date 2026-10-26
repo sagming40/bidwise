@@ -32,8 +32,19 @@ BID_RESULT_URL = (
 ANNOUNCEMENT_INQRY_DIV = "1"
 RESULT_INQRY_DIV = "2"
 
+# 면허제한정보 ─ 입찰공고와 같은 서비스(ad). 수의계약 공고의 업종이 여기 있다 (공종 분류 2차 출처).
+# 조회 기준은 입찰공고와 같은 1(공고게시일시): 2026-10-20 하루치가 그날 공고의 89%와 맞았다.
+LICENSE_LIMIT_URL = (
+    "https://apis.data.go.kr/1230000/ad/BidPublicInfoService/"
+    "getBidPblancListInfoLicenseLimit"
+)
+# 이 API는 한 페이지 최대 999건. 1000 이상을 주면 에러 없이 10건씩 온다 (2026-10-26 실측)
+LICENSE_MAX_ROWS = 999
+
 # 뒤쪽 페이지일수록 응답이 느리다 (2026-10-26 실측: 1페이지 약 1초, 47페이지 약 10초).
 TIMEOUT_SECONDS = 30
+# 면허제한 999건 페이지는 한 번에 수십 초 걸린다
+LICENSE_TIMEOUT_SECONDS = 90
 MAX_ATTEMPTS = 3
 
 
@@ -46,7 +57,7 @@ class NaraJangteoAPIError(Exception):
     pass
 
 
-def _get_with_retry(url: str, params: dict) -> requests.Response:
+def _get_with_retry(url: str, params: dict, timeout: int = TIMEOUT_SECONDS) -> requests.Response:
     """
     시간 초과·연결 끊김일 때만 잠깐 쉬었다가 다시 부른다 (2초 → 4초, 최대 3번).
     2026-10-26 한 달치 수집 중 48페이지째에서 응답이 10초를 넘겨 ReadTimeout으로 멈췄고,
@@ -58,7 +69,7 @@ def _get_with_retry(url: str, params: dict) -> requests.Response:
     """
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
-            return requests.get(url, params=params, timeout=TIMEOUT_SECONDS)
+            return requests.get(url, params=params, timeout=timeout)
         except (requests.Timeout, requests.ConnectionError) as e:
             if attempt == MAX_ATTEMPTS:
                 raise
@@ -67,16 +78,15 @@ def _get_with_retry(url: str, params: dict) -> requests.Response:
             time.sleep(wait)
 
 
-def _call_api(url: str, params: dict) -> dict:
+def _call_api(url: str, params: dict, timeout: int | None = None) -> dict:
     """
-    두 API(입찰/낙찰정보)가 똑같은 요청·응답 뼈대를 사용하기 때문에,
+    세 API(입찰공고·낙찰정보·면허제한)가 똑같은 요청·응답 뼈대를 사용하기 때문에,
     실제 HTTP 통신은 이 함수 한 곳에서만 한다.
-    추후 낙찰정보 클라이언트를 만들 때에도 이 함수를 그대로 재사용한다.
     """
     # 인증키는 여기서 한 번만 붙인다. params로 넘기면 requests가 URL 인코딩을 해주므로
     # .env에는 % 없는 원본 키를 넣어야 한다 (인코딩된 키는 이중 인코딩되어 인증 실패).
     params = {"serviceKey": get_settings().data_go_kr_service_key, **params}
-    response = _get_with_retry(url, params)
+    response = _get_with_retry(url, params, timeout or TIMEOUT_SECONDS)
 
     # HTTP 레벨 에러(404, 500 등)는 이 곳에서 바로 예외로 터뜨린다.
     # 이 함수가 없으면 "response.json()이 이상하다"는 엉뚱한 error로 이어질 수 있다.
@@ -94,7 +104,8 @@ def _call_api(url: str, params: dict) -> dict:
     return data["response"]["body"]
 
 
-def _fetch_page(url: str, inqry_div: str, begin_dt: str, end_dt: str, page_no: int, num_of_rows: int) -> dict:
+def _fetch_page(url: str, inqry_div: str, begin_dt: str, end_dt: str, page_no: int, num_of_rows: int,
+                timeout: int | None = None) -> dict:
     """
     기간 조회 1페이지. 입찰공고·낙찰정보가 파라미터 모양까지 같아서 주소와 조회 기준만 바꿔 끼운다.
     begin_dt, end_dt 형식: "YYYYMMDDHHMM" (12자리, 예: "202609010000")
@@ -107,7 +118,7 @@ def _fetch_page(url: str, inqry_div: str, begin_dt: str, end_dt: str, page_no: i
         "pageNo": str(page_no),
         "numOfRows": str(num_of_rows),
     }
-    return _call_api(url, params)
+    return _call_api(url, params, timeout)
 
 
 def fetch_announcements_page(begin_dt: str, end_dt: str, page_no: int = 1, num_of_rows: int = 100) -> dict:
@@ -128,7 +139,18 @@ def fetch_all_results(begin_dt: str, end_dt: str, num_of_rows: int = 100) -> lis
     return _fetch_all(BID_RESULT_URL, RESULT_INQRY_DIV, begin_dt, end_dt, num_of_rows)
 
 
-def _fetch_all(url: str, inqry_div: str, begin_dt: str, end_dt: str, num_of_rows: int) -> list[dict]:
+def fetch_all_license_limits(begin_dt: str, end_dt: str, num_of_rows: int = LICENSE_MAX_ROWS) -> list[dict]:
+    """
+    기간 안에 게시된 공고의 면허제한정보를 전부 모은다. 공사뿐 아니라 물품·용역 공고 것도 섞여 온다
+    (2026-10-20 하루 1,886행 중 공사 644) ─ 거르는 건 transformer/license.py가 한다.
+    999건씩 받으므로 하루치가 2~3번이면 끝나지만, 한 번 응답이 느려서 타임아웃을 넉넉히 둔다.
+    """
+    return _fetch_all(LICENSE_LIMIT_URL, ANNOUNCEMENT_INQRY_DIV, begin_dt, end_dt, num_of_rows,
+                      timeout=LICENSE_TIMEOUT_SECONDS)
+
+
+def _fetch_all(url: str, inqry_div: str, begin_dt: str, end_dt: str, num_of_rows: int,
+               timeout: int | None = None) -> list[dict]:
     """
     기간 안의 항목을 페이지 끝까지 전부 모아서 반환한다.
     비유: 도서관에서 1상자에 100권 씩 지원받기로 했다.
@@ -142,7 +164,7 @@ def _fetch_all(url: str, inqry_div: str, begin_dt: str, end_dt: str, num_of_rows
     page_no = 1
 
     while True:
-        body = _fetch_page(url, inqry_div, begin_dt, end_dt, page_no, num_of_rows)
+        body = _fetch_page(url, inqry_div, begin_dt, end_dt, page_no, num_of_rows, timeout)
         total_count = body["totalCount"]
 
         # ⚠️ 나라장터 응답의 함정: 결과가 0건이면 "items"가 list가 아니라
@@ -151,6 +173,15 @@ def _fetch_all(url: str, inqry_div: str, begin_dt: str, end_dt: str, num_of_rows
         items = body.get("items", [])
         if isinstance(items, str):
             items = []
+
+        # 첫 페이지가 요청한 크기보다 적게 왔는데 아직 남은 게 있다 = 페이지 크기가 무시됐다.
+        # 2026-10-26 면허제한정보에 numOfRows=1000을 주자 에러 없이 10건씩 와서 호출 189번을 썼다 (최대 999).
+        # 그대로 돌면 한도를 헛되이 쓰므로 바로 멈춘다.
+        if page_no == 1 and len(items) < num_of_rows and len(items) < total_count:
+            raise NaraJangteoAPIError(
+                f"페이지 크기 {num_of_rows}를 요청했는데 {len(items)}건만 왔다 (전체 {total_count}). "
+                "API가 허용하는 최대 numOfRows를 넘었는지 확인할 것"
+            )
 
         all_items.extend(items)
 

@@ -36,7 +36,7 @@ def test_DB_컬럼에_맞는_키만_남긴다(real_announcements_page):
         "bid_ntce_no", "bid_ntce_ord", "bid_ntce_nm", "ntce_instt_nm", "dminstt_nm",
         "cnstrtsite_rgn_nm", "main_cnstty_nm", "cntrct_ccncls_mthd_nm",
         "bdgt_amt", "presmpt_prce", "bid_ntce_dt", "openg_dt",
-        "region_normalized", "category", "category_source",
+        "lcns_lmt_nm", "region_normalized", "category", "category_source",
     }
 
 
@@ -67,3 +67,15 @@ def test_소수점_붙은_금액도_정수로():
 def test_모르는_날짜_형식은_조용히_넘기지_않는다():
     with pytest.raises(ValueError):
         to_announcement_row({"bidNtceNo": "X1", "bidNtceNm": "테스트 공사", "bidNtceDt": "20261020"})
+
+
+def test_면허를_넘겨주면_면허로_분류한다(real_announcements_page, real_license_page):
+    from app.transformer.license import first_license_by_announcement
+
+    licenses = first_license_by_announcement(real_license_page["response"]["body"]["items"])
+    item = real_announcements_page["response"]["body"]["items"][0]  # R26BK01779808, 업종 없는 수의계약
+
+    row = to_announcement_row(item, licenses.get((item["bidNtceNo"], item["bidNtceOrd"])))
+
+    assert row["lcns_lmt_nm"] == "기계설비ㆍ가스공사업"
+    assert (row["category"], row["category_source"]) == ("기계설비", "license")

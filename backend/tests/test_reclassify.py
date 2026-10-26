@@ -37,6 +37,23 @@ def test_빈_정제_컬럼을_채우고_두_번째는_바꿀_게_없다(session)
     }
 
 
+def test_면허를_채우면_재분류에서_license로_바뀐다(session):
+    bid_repo.upsert_announcements(session, [make_row("A1", "서울특별시", None, "마을안 도로 포장공사")])
+    session.commit()
+    reclassify()
+
+    # 백필: 저장된 공고에 면허만 채운다. DB에 없는 공고(ZZZ)의 면허는 무시
+    filled = bid_repo.update_license_names(session, {("A1", "000"): "전기공사업", ("ZZZ", "000"): "토목공사업"})
+    session.commit()
+    result = reclassify()
+
+    assert filled == 1
+    assert result["changed"] == 1
+    session.expire_all()
+    row = session.scalars(select(BidAnnouncement)).one()
+    assert (row.lcns_lmt_nm, row.category, row.category_source) == ("전기공사업", "전기", "license")
+
+
 def test_규칙이_바뀌면_바뀐_행만_고친다(session, monkeypatch):
     bid_repo.upsert_announcements(session, [
         make_row("A1", "서울특별시", None, "마을안 도로 포장공사"),

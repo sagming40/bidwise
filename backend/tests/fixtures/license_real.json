@@ -1,0 +1,59 @@
+{
+  "response": {
+    "header": {
+      "resultCode": "00",
+      "resultMsg": "정상"
+    },
+    "body": {
+      "items": [
+        {
+          "bidNtceNo": "R26BK01779864",
+          "bidNtceOrd": "000",
+          "lmtGrpNo": "2",
+          "lmtSno": "1",
+          "lcnsLmtNm": "토목건축공사업/0003",
+          "permsnIndstrytyList": "",
+          "indstrytyMfrcFldList": "",
+          "rgstDt": "2026-10-20 08:58:19",
+          "bsnsDivNm": "공사"
+        },
+        {
+          "bidNtceNo": "R26BK01779864",
+          "bidNtceOrd": "000",
+          "lmtGrpNo": "1",
+          "lmtSno": "1",
+          "lcnsLmtNm": "토목공사업/0001",
+          "permsnIndstrytyList": "[토목건축공사업/0003]",
+          "indstrytyMfrcFldList": "",
+          "rgstDt": "2026-10-20 08:58:19",
+          "bsnsDivNm": "공사"
+        },
+        {
+          "bidNtceNo": "R26BK01779808",
+          "bidNtceOrd": "000",
+          "lmtGrpNo": "1",
+          "lmtSno": "1",
+          "lcnsLmtNm": "기계설비ㆍ가스공사업/6202",
+          "permsnIndstrytyList": "",
+          "indstrytyMfrcFldList": "[1^기계설비공사]",
+          "rgstDt": "2026-10-20 01:19:37",
+          "bsnsDivNm": "공사"
+        },
+        {
+          "bidNtceNo": "R26BK01779826",
+          "bidNtceOrd": "000",
+          "lmtGrpNo": "1",
+          "lmtSno": "1",
+          "lcnsLmtNm": "식품판매업(집단급식소식품판매업)/5246",
+          "permsnIndstrytyList": "[식품제조·가공업/1399],[축산물가공업(식육가공업)/4004],[축산물가공업(유가공업)/4005],[축산물가공업(알가공업)/4006],[식육포장처리업/4007],[축산물판매업(식육판매업)/4010],[축산물판매업(식육부산물전문판매업)/4011],[축산물판매업(우유류판매업)/4012],[축산물판매업(축산물유통전문판매업)/4041],[축산물판매업(식용란수집판매업)/4043],[식육즉석판매가공업/4094],[식품소분업/5207],[식품판매업(유통전문판매업)/5210],[식품판매업(기타 식품판매업)/5212],[수입식품등 수입판매업/5286]",
+          "indstrytyMfrcFldList": "",
+          "rgstDt": "2026-10-20 07:58:22",
+          "bsnsDivNm": "물품"
+        }
+      ],
+      "numOfRows": 4,
+      "pageNo": 1,
+      "totalCount": 4
+    }
+  }
+}

@@ -55,6 +55,17 @@ def real_results_page() -> dict:
 
 
 @pytest.fixture
+def real_license_page() -> dict:
+    """
+    면허제한정보 실제 응답 원문 4행 (2026-10-20 공고분).
+    - R26BK01779864: 면허 2개 (그룹 2 토목건축, 그룹 1 토목) ─ 일부러 그룹 2를 먼저 넣어 순서 정렬을 확인한다
+    - R26BK01779808: 면허 1개 (기계설비ㆍ가스) ─ announcements_real.json의 첫 공고와 같은 공고
+    - R26BK01779826: 물품 공고 ─ 걸러져야 한다
+    """
+    return json.loads((FIXTURES_DIR / "license_real.json").read_text(encoding="utf-8"))
+
+
+@pytest.fixture
 def session():
     """
     테이블을 만들어 둔 임시 SQLite 세션. 테이블 구조는 마이그레이션 테스트가 models.py와 같다는 걸 보장하므로

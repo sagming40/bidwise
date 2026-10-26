@@ -62,6 +62,39 @@ def test_낙찰정보는_공고일시_기준으로_조회한다(monkeypatch, rea
     assert len(items) == 3
 
 
+def test_면허제한은_999건씩_넉넉한_타임아웃으로(monkeypatch, real_license_page):
+    calls = []
+
+    def fake_get(url, params, timeout):
+        calls.append((url, params, timeout))
+        return FakeResponse(real_license_page)
+
+    monkeypatch.setattr(client.requests, "get", fake_get)
+
+    items = client.fetch_all_license_limits("202610200000", "202610202359")
+
+    url, params, timeout = calls[0]
+    assert url.endswith("/ad/BidPublicInfoService/getBidPblancListInfoLicenseLimit")
+    assert params["numOfRows"] == "999"   # 1000 이상은 조용히 10건이 된다
+    assert timeout == client.LICENSE_TIMEOUT_SECONDS
+    assert len(items) == 4
+
+
+def test_페이지_크기가_무시되면_바로_멈춘다(monkeypatch):
+    # 999건을 요청했는데 10건만 오고 전체는 1,886건 → 계속 돌면 189번 호출 (2026-10-26 실제로 겪음)
+    calls = []
+
+    def fake_get(url, params, timeout):
+        calls.append(1)
+        return FakeResponse(make_page([{"bidNtceNo": str(i)} for i in range(10)], 1886))
+
+    monkeypatch.setattr(client.requests, "get", fake_get)
+
+    with pytest.raises(client.NaraJangteoAPIError, match="페이지 크기"):
+        client.fetch_all_license_limits("202610200000", "202610202359")
+    assert len(calls) == 1
+
+
 def test_resultCode가_00이_아니면_예외(monkeypatch):
     error_payload = {"response": {"header": {"resultCode": "03", "resultMsg": "NODATA_ERROR"}}}
     monkeypatch.setattr(client.requests, "get", lambda url, params, timeout: FakeResponse(error_payload))
