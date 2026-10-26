@@ -70,6 +70,52 @@ def test_resultCode가_00이_아니면_예외(monkeypatch):
         client.fetch_announcements_page("202609010000", "202609052359")
 
 
+def test_시간_초과면_쉬었다가_다시_부른다(monkeypatch, announcements_page):
+    attempts = []
+    waits = []
+
+    def flaky_get(url, params, timeout):
+        attempts.append(timeout)
+        if len(attempts) < 3:
+            raise client.requests.ReadTimeout("느림")
+        return FakeResponse(announcements_page)
+
+    monkeypatch.setattr(client.requests, "get", flaky_get)
+    monkeypatch.setattr(client.time, "sleep", waits.append)  # 테스트에서 진짜로 기다리지 않는다
+
+    body = client.fetch_announcements_page("202609010000", "202609052359")
+
+    assert len(attempts) == 3
+    assert waits == [2, 4]
+    assert body["totalCount"] == 2
+
+
+def test_계속_시간_초과면_결국_예외(monkeypatch):
+    def always_timeout(url, params, timeout):
+        raise client.requests.ConnectTimeout("안 붙음")
+
+    monkeypatch.setattr(client.requests, "get", always_timeout)
+    monkeypatch.setattr(client.time, "sleep", lambda s: None)
+
+    with pytest.raises(client.requests.ConnectTimeout):
+        client.fetch_announcements_page("202609010000", "202609052359")
+
+
+def test_HTTP_에러는_재시도하지_않는다(monkeypatch):
+    # 인증 실패 같은 4xx는 다시 불러도 같다. 호출 한도만 버리지 않게 한 번에 끝낸다.
+    attempts = []
+
+    def fake_get(url, params, timeout):
+        attempts.append(1)
+        return FakeResponse({}, status_code=401)
+
+    monkeypatch.setattr(client.requests, "get", fake_get)
+
+    with pytest.raises(client.requests.HTTPError):
+        client.fetch_announcements_page("202609010000", "202609052359")
+    assert len(attempts) == 1
+
+
 def test_HTTP_에러는_그대로_올린다(monkeypatch):
     monkeypatch.setattr(client.requests, "get", lambda url, params, timeout: FakeResponse({}, status_code=500))
 

@@ -2,11 +2,12 @@
 # Collector(가져오기) → Transformer(손질) → Repository(창고에 넣기)를 순서대로 잇기만 한다.
 # APScheduler는 M3 이후에 붙인다. 그때도 스케줄러는 이 함수를 부르기만 하면 된다.
 #
-# 실행 (backend/에서):
+# 실행 (backend/에서): 기간이 길면 하루씩 나눠서 수집·저장한다
 #   python -m app.collect 202610200000 202610202359
 
 import argparse
 import logging
+from datetime import datetime, timedelta
 
 from sqlalchemy import func, select
 
@@ -21,6 +22,9 @@ logger = logging.getLogger(__name__)
 
 # 페이지 1장 = 호출 1번. 2026-09-13에 200건씩 받는 것까지 실측으로 확인했다.
 NUM_OF_ROWS = 200
+
+# 나라장터 조회 기간 형식 (YYYYMMDDHHMM)
+DT_FORMAT = "%Y%m%d%H%M"
 
 
 def collect(begin_dt: str, end_dt: str) -> dict:
@@ -57,6 +61,43 @@ def collect(begin_dt: str, end_dt: str) -> dict:
     }
 
 
+def split_by_day(begin_dt: str, end_dt: str) -> list[tuple[str, str]]:
+    """
+    긴 기간을 하루 단위 구간으로 자른다. 첫날은 begin_dt부터, 마지막 날은 end_dt까지.
+        ("202609300900", "202610021200")
+        → [("202609300900", "202609302359"), ("202610010000", "202610012359"), ("202610020000", "202610021200")]
+    """
+    begin = datetime.strptime(begin_dt, DT_FORMAT)
+    end = datetime.strptime(end_dt, DT_FORMAT)
+
+    windows = []
+    day_start = begin
+    while day_start <= end:
+        day_end = min(day_start.replace(hour=23, minute=59), end)
+        windows.append((day_start.strftime(DT_FORMAT), day_end.strftime(DT_FORMAT)))
+        day_start = (day_start + timedelta(days=1)).replace(hour=0, minute=0)
+    return windows
+
+
+def collect_by_day(begin_dt: str, end_dt: str) -> dict:
+    """
+    기간을 하루씩 나눠 collect()를 부른다. 하루가 끝날 때마다 commit된다.
+
+    한 달을 한 번에 부르면 (2026-10-26 실측) 공고만 52페이지라 뒤로 갈수록 느려지고,
+    48페이지째 시간 초과로 멈추자 그때까지 받은 것이 전부 버려졌다.
+    하루씩이면 하루치가 3페이지 남짓이라 빠르고, 실패해도 그날 하루만 다시 돌리면 된다.
+    비유: 이삿짐을 트럭 한 대에 다 싣지 않고, 박스 단위로 나르며 하나씩 내려놓는 것.
+    """
+    totals = {"announcements": 0, "results": 0, "results_skipped": 0}
+    for day_begin, day_end in split_by_day(begin_dt, end_dt):
+        logger.info("=== %s ~ %s", day_begin, day_end)
+        for key, value in collect(day_begin, day_end).items():
+            totals[key] += value
+    logger.info("전체: 공고 %d건, 낙찰결과 %d건 저장 (공고 없어 건너뜀 %d)",
+                totals["announcements"], totals["results"], totals["results_skipped"])
+    return totals
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
 
@@ -65,4 +106,4 @@ if __name__ == "__main__":
     parser.add_argument("end_dt", help="끝 일시 YYYYMMDDHHMM (예: 202610202359)")
     args = parser.parse_args()
 
-    collect(args.begin_dt, args.end_dt)
+    collect_by_day(args.begin_dt, args.end_dt)

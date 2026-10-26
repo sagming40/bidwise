@@ -3,6 +3,7 @@
 # 하지 않는 일: 데이터 해석, 지역명 정리, 공사분류 정리, DB 저장(→ repository)
 
 import logging
+import time
 
 import requests
 
@@ -31,6 +32,10 @@ BID_RESULT_URL = (
 ANNOUNCEMENT_INQRY_DIV = "1"
 RESULT_INQRY_DIV = "2"
 
+# 뒤쪽 페이지일수록 응답이 느리다 (2026-10-26 실측: 1페이지 약 1초, 47페이지 약 10초).
+TIMEOUT_SECONDS = 30
+MAX_ATTEMPTS = 3
+
 
 class NaraJangteoAPIError(Exception):
     """
@@ -39,6 +44,27 @@ class NaraJangteoAPIError(Exception):
     배송 실패(HTTP 에러)가 아니라 상자 내용물을 확인해야 알 수 있는 에러라서 따로 구분한다.
     """
     pass
+
+
+def _get_with_retry(url: str, params: dict) -> requests.Response:
+    """
+    시간 초과·연결 끊김일 때만 잠깐 쉬었다가 다시 부른다 (2초 → 4초, 최대 3번).
+    2026-10-26 한 달치 수집 중 48페이지째에서 응답이 10초를 넘겨 ReadTimeout으로 멈췄고,
+    그때까지 받은 47페이지(호출 47번)가 통째로 버려졌다.
+
+    다시 불러서 나아질 수 있는 에러만 재시도한다.
+    인증 실패나 날짜 형식 오류(HTTP 4xx, resultCode != "00")는 백 번 불러도 같으니 바로 올린다 ─ 호출만 버린다.
+    비유: 전화가 안 터지면 다시 걸어 보지만, 없는 번호라는 안내가 나오면 다시 걸지 않는다.
+    """
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            return requests.get(url, params=params, timeout=TIMEOUT_SECONDS)
+        except (requests.Timeout, requests.ConnectionError) as e:
+            if attempt == MAX_ATTEMPTS:
+                raise
+            wait = 2 ** attempt
+            logger.warning("%s ─ %d초 뒤 다시 시도 (%d/%d)", type(e).__name__, wait, attempt, MAX_ATTEMPTS)
+            time.sleep(wait)
 
 
 def _call_api(url: str, params: dict) -> dict:
@@ -50,7 +76,7 @@ def _call_api(url: str, params: dict) -> dict:
     # 인증키는 여기서 한 번만 붙인다. params로 넘기면 requests가 URL 인코딩을 해주므로
     # .env에는 % 없는 원본 키를 넣어야 한다 (인코딩된 키는 이중 인코딩되어 인증 실패).
     params = {"serviceKey": get_settings().data_go_kr_service_key, **params}
-    response = requests.get(url, params=params, timeout=10)
+    response = _get_with_retry(url, params)
 
     # HTTP 레벨 에러(404, 500 등)는 이 곳에서 바로 예외로 터뜨린다.
     # 이 함수가 없으면 "response.json()이 이상하다"는 엉뚱한 error로 이어질 수 있다.
