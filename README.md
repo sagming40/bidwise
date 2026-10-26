@@ -2,7 +2,7 @@
 
 > 조달청 나라장터 공사 입찰 데이터를 수집·분석해, 지역별·공종별 낙찰 경향을 지도와 차트로 조망하는 웹 대시보드
 
-[![상태](https://img.shields.io/badge/상태-M1%20데이터%20수집%20진행%20중-F2C12E)](./MILESTONES.md)
+[![상태](https://img.shields.io/badge/상태-M2%20정제·분석%20준비-F2C12E)](./MILESTONES.md)
 [![백엔드](https://img.shields.io/badge/backend-Python%20·%20FastAPI-3776AB)](#기술-스택)
 [![DB](https://img.shields.io/badge/database-PostgreSQL-336791)](#기술-스택)
 [![프론트](https://img.shields.io/badge/frontend-React%20·%20TypeScript-61DAFB)](#기술-스택)
@@ -143,7 +143,7 @@ erDiagram
 
 | 기능 | 상태 | 설명 |
 |---|---|---|
-| 나라장터 데이터 자동 수집 | 🟡 진행 중 | 두 API를 `bid_ntce_no`로 연결, 일 1회 스케줄링 — 입찰공고 수집·변환·UPSERT까지 완료 |
+| 나라장터 데이터 자동 수집 | 🟡 수동 수집 완료 | 두 API를 `(bid_ntce_no, bid_ntce_ord)`로 연결, 일 1회 스케줄링 — 수동 수집·연결까지 완료, 스케줄링은 M3 이후 |
 | 지역·공종 정제 및 분류 | ⬜ 예정 | 지역명 정규화, 공종 2단계 폴백 분류 |
 | 요약 통계 대시보드 | ⬜ 예정 | 전체 공고 수 · 평균 낙찰률 · 예산 규모 |
 | 지역별 낙찰률 지도 | ⬜ 예정 | ECharts 코로플레스, 5단계 블루 스케일 |
@@ -224,7 +224,7 @@ flowchart LR
 
 ## 실행 방법
 
-> ⚠️ **현재 M1(데이터 수집) 진행 중입니다.** 지금 실행할 수 있는 것은 DB 테이블 생성과 입찰공고 수동 수집까지이고, API 서버(`uvicorn`)는 M3, 프론트엔드는 M3 이후에 생깁니다.
+> ⚠️ **M1(데이터 수집)까지 끝났고, M2(정제·분석) 전입니다.** 지금 실행할 수 있는 것은 DB 테이블 생성과 입찰공고·낙찰결과 수동 수집까지이고, API 서버(`uvicorn`)는 M3, 프론트엔드는 M3 이후에 생깁니다.
 
 ### 사전 요구사항
 
@@ -246,7 +246,7 @@ cp .env.example .env
 
 alembic upgrade head            # 테이블 생성 (마이그레이션 적용)
 pytest                          # 테스트 (실제 DB·API를 쓰지 않음)
-python -m app.collect 202610200000 202610202359   # 입찰공고 수동 수집 (기간: YYYYMMDDHHMM)
+python -m app.collect 202610200000 202610202359   # 입찰공고·낙찰결과 수동 수집 (기간: YYYYMMDDHHMM)
 uvicorn main:app --reload       # http://localhost:8000/docs  (M3 이후)
 ```
 
@@ -277,6 +277,7 @@ npm run dev                     # http://localhost:5173
 | 한계 | 내용 |
 |---|---|
 | 실시간성 없음 | 일 1회 수집이므로 오늘 올라온 공고는 내일 보인다 |
+| 최근 기간 낙찰률 편향 | 경쟁입찰은 개찰이 몇 주 뒤라, 최근 기간의 낙찰률은 결과가 먼저 나오는 수의계약 위주로 계산된다 |
 | 집계 부하 | 데이터가 수십만 건 쌓이면 `GROUP BY`가 느려질 수 있다 |
 | 공종 분류 정확도 | 키워드 추정 분류는 오분류 가능성이 있다 (`source` 필드로 구분 표시) |
 | 예정가격 미제공 | API가 예정가격을 직접 주지 않아 낙찰률을 자체 계산할 수 없다 |
