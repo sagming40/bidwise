@@ -65,6 +65,15 @@ class BidAnnouncement(Base):
     # 수집 meta data. "내가 언제 이 데이터를 가져왔는지" ─ API가 준 값이 아니고 직접 기록한다. (UTC)
     fetched_at: Mapped[datetime] = mapped_column(default=utcnow)
 
+    # ── M2 정제 결과 (2026-10-26 추가, 마이그레이션 0002) ──
+    # 원본은 그대로 두고 손질한 값을 옆 칸에 따로 적는다. 규칙을 고치면 원본에서 다시 계산할 수 있게.
+    # 시/도 짧은 이름 ("서울", "전남광주" …). 지역별 GROUP BY·필터 기준이라 인덱스 (04_api_spec.md 3.2절)
+    region_normalized: Mapped[str | None] = mapped_column(String(20))
+    # 공종 대분류 ("건축", "토목" … "기타"). 분류 못하면 NULL
+    category: Mapped[str | None] = mapped_column(String(20))
+    # 분류 출처 ─ main_cnstty(업종으로 분류) / keyword(공고명으로 추정) / none(분류 못함). 화면의 "추정" 배지 근거
+    category_source: Mapped[str | None] = mapped_column(String(20))
+
     # 1:0..1 관계의 "1"쪽. 낙찰결과 하나(또는 0개)를 들여다볼 수 있는 창문
     # 타입이 "BidResult | None"이라 SQLAlchemy가 "list가 아니라 하나 or 없음"으로 다룬다. (예전의 uselist=False)
     result: Mapped["BidResult | None"] = relationship(back_populates="announcement")
@@ -75,6 +84,7 @@ class BidAnnouncement(Base):
         # 지역별 GROUP BY가 잦으니 INDEX. (전화번호부에 색인을 붙이는 것과 같은 원리)
         Index("ix_cnstrtsite_rgn_nm", "cnstrtsite_rgn_nm"),
         Index("ix_bid_ntce_dt", "bid_ntce_dt"),
+        Index("ix_region_normalized", "region_normalized"),
     )
 
 

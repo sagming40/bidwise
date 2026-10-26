@@ -29,14 +29,24 @@ def test_실제_응답의_빈_문자열은_None(real_announcements_page):
 
 
 def test_DB_컬럼에_맞는_키만_남긴다(real_announcements_page):
-    # 143개 필드 중 ERD에서 고른 것만. id·fetched_at은 DB·repository가 채운다.
+    # 143개 필드 중 ERD에서 고른 것 + M2 정제 결과. id·fetched_at은 DB·repository가 채운다.
     row = to_announcement_row(real_announcements_page["response"]["body"]["items"][0])
 
     assert set(row) == {
         "bid_ntce_no", "bid_ntce_ord", "bid_ntce_nm", "ntce_instt_nm", "dminstt_nm",
         "cnstrtsite_rgn_nm", "main_cnstty_nm", "cntrct_ccncls_mthd_nm",
         "bdgt_amt", "presmpt_prce", "bid_ntce_dt", "openg_dt",
+        "region_normalized", "category", "category_source",
     }
+
+
+def test_수집할_때_지역과_공종도_정한다(real_announcements_page):
+    items = real_announcements_page["response"]["body"]["items"]
+    rows = [to_announcement_row(item) for item in items]
+
+    assert [r["region_normalized"] for r in rows] == ["부산", "경북", "경기"]
+    # 3건 모두 업종이 비어 있는 수의계약이라 1차 분류는 안 된다 → keyword 또는 none
+    assert all(r["category_source"] in {"keyword", "none"} for r in rows)
 
 
 def test_빠진_필드와_빈_값은_None_차수는_000():

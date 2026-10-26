@@ -1,18 +1,32 @@
 # 이 파일의 역할 ─ "재료 손질하는 주방 보조" (입찰공고 담당)
 # 하는 일: API 원본 dict(전부 문자열) → DB 컬럼 이름·타입에 맞춘 dict
 # 하지 않는 일: API 호출(→ collector), DB 저장(→ repository)
-# 지역 정규화·공종 분류도 Transformer 일이지만 M2 작업이라 아직 없다.
 
+from app.transformer.category import classify
 from app.transformer.convert import to_datetime, to_int, to_str
+from app.transformer.region import normalize_region
+
+
+def classification_of(cnstrtsite_rgn_nm: str | None, main_cnstty_nm: str | None, bid_ntce_nm: str | None) -> dict:
+    """
+    원본 컬럼 3개 → M2 정제 컬럼 3개. 수집할 때도, 저장된 공고를 다시 분류할 때(reclassify.py)도 이 함수 하나를 쓴다.
+    (두 곳에서 따로 계산하면 규칙을 고칠 때 한쪽만 바뀌는 사고가 난다)
+    """
+    category, source = classify(main_cnstty_nm, bid_ntce_nm)
+    return {
+        "region_normalized": normalize_region(cnstrtsite_rgn_nm),
+        "category": category,
+        "category_source": source,
+    }
 
 
 def to_announcement_row(item: dict) -> dict:
     """
     입찰공고 API 항목 하나 → bid_announcements 행 하나.
-    API 응답에는 필드가 143개 있지만, ERD(02_erd.md 4.1절)에서 고른 12개만 옮겨 담는다.
-    id·fetched_at은 DB와 repository가 채운다.
+    API 응답에는 필드가 143개 있지만, ERD(02_erd.md 4.1절)에서 고른 12개만 옮겨 담고,
+    M2 정제 결과(지역·공종) 3개를 덧붙인다. id·fetched_at은 DB와 repository가 채운다.
     """
-    return {
+    row = {
         "bid_ntce_no": item["bidNtceNo"],
         # 차수가 비어 오면 모델 기본값과 같은 "000"으로 본다. UPSERT 기준이라 NULL이면 안 된다.
         "bid_ntce_ord": to_str(item.get("bidNtceOrd")) or "000",
@@ -28,3 +42,5 @@ def to_announcement_row(item: dict) -> dict:
         "bid_ntce_dt": to_datetime(item.get("bidNtceDt")),
         "openg_dt": to_datetime(item.get("opengDt")),
     }
+    row.update(classification_of(row["cnstrtsite_rgn_nm"], row["main_cnstty_nm"], row["bid_ntce_nm"]))
+    return row

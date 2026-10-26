@@ -1,11 +1,12 @@
 # 이 파일의 역할 ─ "창고 관리자"
-# 하는 일: 정제된 행을 DB에 저장, 중복 처리, 낙찰결과를 공고에 연결 (나중엔 집계 쿼리도 여기에)
+# 하는 일: 정제된 행을 DB에 저장, 중복 처리, 낙찰결과를 공고에 연결, 재분류 결과 쓰기, 집계 쿼리
 # 하지 않는 일: API 호출, 데이터 가공
 # commit은 하지 않는다. 장바구니(session)를 언제 계산할지는 부르는 쪽이 정한다.
 
 import logging
+from datetime import date, datetime, time, timedelta
 
-from sqlalchemy import select, tuple_
+from sqlalchemy import case, func, select, tuple_, update
 from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.orm import Session
 
@@ -104,3 +105,122 @@ def upsert_results(session: Session, rows: list[dict]) -> tuple[int, int]:
         logger.warning("공고가 DB에 없어 건너뛴 낙찰결과 %d건", skipped)
 
     return _upsert(session, BidResult, RESULT_KEY, linked), skipped
+
+
+# ── M2: 재분류 ────────────────────────────────────────────────────────────
+
+CLASSIFICATION_COLUMNS = ("region_normalized", "category", "category_source")
+
+
+def get_classification_inputs(session: Session) -> list:
+    """재분류에 필요한 원본 3개 + 지금 저장된 정제값 3개를 공고마다 꺼낸다."""
+    stmt = select(
+        BidAnnouncement.id,
+        BidAnnouncement.cnstrtsite_rgn_nm,
+        BidAnnouncement.main_cnstty_nm,
+        BidAnnouncement.bid_ntce_nm,
+        *(getattr(BidAnnouncement, col) for col in CLASSIFICATION_COLUMNS),
+    )
+    return list(session.execute(stmt))
+
+
+def update_classifications(session: Session, rows: list[dict]) -> int:
+    """
+    {"id": .., "region_normalized": .., "category": .., "category_source": ..} 목록으로 정제 컬럼만 고친다.
+    기본키(id)가 들어 있는 dict 목록을 update()에 넘기면 SQLAlchemy가 행마다 UPDATE ... WHERE id=? 를 묶어서 보낸다.
+    """
+    for start in range(0, len(rows), CHUNK_SIZE):
+        session.execute(update(BidAnnouncement), rows[start:start + CHUNK_SIZE])
+    return len(rows)
+
+
+# ── M2: 집계 쿼리 ──────────────────────────────────────────────────────────
+# 전부 공고 기준 LEFT JOIN이다. INNER JOIN이면 결과가 없는(개찰 전·유찰) 공고가 통계에서 사라진다.
+#   COUNT(*)          = 전체 공고
+#   COUNT(r.id)       = 결과가 붙은 공고 (NULL은 안 센다)
+#   AVG(r.sucsfbid_rate) = 결과가 있고 낙찰률이 있는 것만으로 낸 평균 (NULL은 알아서 빠진다)
+
+UNCLASSIFIED = "미분류"
+
+
+def _period_filter(date_from: date, date_to: date):
+    """
+    bid_ntce_dt가 date_from 0시 이상, date_to 다음 날 0시 미만.
+    BETWEEN으로 date_to를 넣으면 그날 0시까지만 잡혀서 마지막 날 공고가 빠진다.
+    """
+    start = datetime.combine(date_from, time.min)
+    end = datetime.combine(date_to + timedelta(days=1), time.min)
+    return (BidAnnouncement.bid_ntce_dt >= start) & (BidAnnouncement.bid_ntce_dt < end)
+
+
+def _base_counts():
+    return (
+        func.count().label("total_count"),
+        func.count(BidResult.id).label("completed_count"),
+        func.avg(BidResult.sucsfbid_rate).label("avg_sucsfbid_rate"),
+    )
+
+
+def get_summary(session: Session, date_from: date, date_to: date, region: str | None = None) -> dict:
+    """대시보드 요약 카드 (04_api_spec.md 3.1절)."""
+    stmt = (
+        select(*_base_counts(), func.coalesce(func.sum(BidAnnouncement.bdgt_amt), 0).label("total_budget_amt"))
+        .select_from(BidAnnouncement)
+        .outerjoin(BidResult, BidResult.announcement_id == BidAnnouncement.id)
+        .where(_period_filter(date_from, date_to))
+    )
+    if region:
+        stmt = stmt.where(BidAnnouncement.region_normalized == region)
+    row = session.execute(stmt).one()
+    return {
+        "total_announcements": row.total_count,
+        "completed_count": row.completed_count,
+        "pending_count": row.total_count - row.completed_count,
+        "avg_sucsfbid_rate": row.avg_sucsfbid_rate,
+        # PostgreSQL의 SUM(BIGINT)는 numeric(Decimal)으로 돌아온다 (SQLite는 int라 테스트로는 안 보였다 ─ 2026-10-26 실제 DB에서 발견).
+        # 금액 합계는 원 단위 정수라 int로 맞춘다 (04_api_spec.md 3.1절)
+        "total_budget_amt": int(row.total_budget_amt),
+    }
+
+
+def get_region_stats(session: Session, date_from: date, date_to: date) -> list[dict]:
+    """지역별 낙찰률 (지도용, 04_api_spec.md 3.2절). 결과가 하나도 없는 지역도 avg=None으로 포함된다."""
+    stmt = (
+        select(
+            BidAnnouncement.region_normalized.label("region"),
+            *_base_counts(),
+            func.avg(BidAnnouncement.bdgt_amt).label("avg_budget_amt"),
+        )
+        .select_from(BidAnnouncement)
+        .outerjoin(BidResult, BidResult.announcement_id == BidAnnouncement.id)
+        .where(_period_filter(date_from, date_to))
+        .group_by(BidAnnouncement.region_normalized)
+        .order_by(func.count().desc())
+    )
+    return [row._asdict() for row in session.execute(stmt)]
+
+
+def get_category_stats(
+    session: Session, date_from: date, date_to: date, region: str | None = None, limit: int = 10
+) -> list[dict]:
+    """
+    공종 대분류별 낙찰률 (막대차트용, 04_api_spec.md 3.3절). 분류 못한 공고는 "미분류"로 묶는다.
+    한 대분류 안에 업종으로 분류된 것과 키워드로 추정한 것이 섞이므로, 추정 건수(keyword_count)를 같이 준다.
+    """
+    category = func.coalesce(BidAnnouncement.category, UNCLASSIFIED).label("category")
+    stmt = (
+        select(
+            category,
+            *_base_counts(),
+            func.sum(case((BidAnnouncement.category_source == "keyword", 1), else_=0)).label("keyword_count"),
+        )
+        .select_from(BidAnnouncement)
+        .outerjoin(BidResult, BidResult.announcement_id == BidAnnouncement.id)
+        .where(_period_filter(date_from, date_to))
+        .group_by(category)
+        .order_by(func.count().desc())
+        .limit(limit)
+    )
+    if region:
+        stmt = stmt.where(BidAnnouncement.region_normalized == region)
+    return [row._asdict() for row in session.execute(stmt)]
