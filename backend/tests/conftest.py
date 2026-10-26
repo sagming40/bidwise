@@ -4,7 +4,8 @@ from pathlib import Path
 import pytest
 
 from app.config import get_settings
-from app.database import get_engine
+from app.database import get_engine, get_session
+from app.models import Base
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -33,3 +34,23 @@ def announcements_page() -> dict:
     나머지 필드 값은 지어낸 것. 다음에 실제 API를 호출할 때 응답 원문을 저장해서 바꿔 넣는다.
     """
     return json.loads((FIXTURES_DIR / "announcements_page.json").read_text(encoding="utf-8"))
+
+
+@pytest.fixture
+def real_announcements_page() -> dict:
+    """
+    입찰공고 API 실제 응답 원문 (2026-10-20 공고분, 10건 중 3건만 남김. 필드 143개 그대로).
+    변환 코드가 "진짜 모양"의 데이터에서 깨지지 않는지 확인하는 용도.
+    """
+    return json.loads((FIXTURES_DIR / "announcements_real.json").read_text(encoding="utf-8"))
+
+
+@pytest.fixture
+def session():
+    """
+    테이블을 만들어 둔 임시 SQLite 세션. 테이블 구조는 마이그레이션 테스트가 models.py와 같다는 걸 보장하므로
+    여기서는 create_all로 빠르게 만든다.
+    """
+    Base.metadata.create_all(get_engine())
+    with get_session() as session:
+        yield session
