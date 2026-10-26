@@ -67,7 +67,8 @@ BidWise: 나라장터 공사 입찰 데이터를 수집해서 지역별·공종�
 - **응답의 빈 값**: 결과가 0건이면 `items`가 리스트가 아니라 빈 문자열로 온다. 필드의 `""`는 `None`으로 바꾼다
 - **타입**: 금액은 `BIGINT`, 낙찰률은 `NUMERIC(6,3)` (`FLOAT` 금지)
 - **테스트는 SQLite, 실제는 PostgreSQL**: 같은 SQL이라도 반환 타입이 다를 수 있다 (예: `SUM(BIGINT)`가 PostgreSQL에선 `Decimal`). pytest 통과 뒤에도 실제 DB로 한 번 확인한다
-- **`main_cnstty_nm`은 공종이 아니라 면허 업종**(47종)이다. 공종은 대분류 11개(`transformer/category.py`). 규칙을 고치면 `python -m app.reclassify`
+- **`main_cnstty_nm`은 공종이 아니라 면허 업종**(47종)이다. 공종은 대분류 11개(`transformer/category.py`). 분류 순서는 업종 → 면허제한(`lcns_lmt_nm`) → 공고명 키워드. 규칙을 고치면 `python -m app.reclassify`
+- **페이지 크기 상한**: 면허제한정보는 `numOfRows` 최대 999, 넘기면 에러 없이 10건씩 온다. 처음 쓰는 API는 첫 응답의 실제 건수부터 확인한다 (`_fetch_all`이 첫 페이지에서 검사함)
 - **PostgreSQL 15+**: 새 DB 유저는 `public` 스키마 CREATE 권한이 없다 → `GRANT ALL ON SCHEMA public TO <유저>;`
 - **Claude의 Bash 도구는 외부 API에 못 붙는다** (`apis.data.go.kr` 연결 시간 초과). 실제 API 호출은 PowerShell로 한다
 - **한글 출력**: 콘솔에 깨져 보여도 데이터는 정상일 수 있다. 파이썬 출력은 `-X utf8`로 (`-I`는 `PYTHONIOENCODING`을 무시)
@@ -95,5 +96,6 @@ alembic upgrade head; alembic check   # 마이그레이션 적용, 모델과 차
 pytest                           # 테스트 (임시 SQLite·가짜 응답, 실제 DB·API 안 씀)
 python -m app.collect 202610200000 202610202359   # 입찰공고·낙찰결과 수동 수집 (실제 API 호출 — 한도 주의)
 python -m app.reclassify         # 지역·공종 규칙을 고친 뒤 저장된 공고 다시 분류 (API 호출 없음)
+python -m app.backfill_license 202609260000 202610252359   # 2026-10-26 전에 수집한 공고에 면허 채우기 + 재분류 (하루 2~3회 호출)
 psql -U bidwise_app -d bidwise -c "\dt"   # 테이블 확인
 ```

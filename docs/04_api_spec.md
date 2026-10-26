@@ -277,7 +277,7 @@ GET /api/stats/category?from=2026-06-01&to=2026-09-11&region=서울
 | 필드 | 타입 | 설명 |
 |---|---|---|
 | `category` | string | 공사종류 |
-| `source` | string | 분류 출처 — `main_cnstty` / `keyword` / `none` |
+| `source` | string | 분류 출처 — `main_cnstty` / `license` / `keyword` / `none` |
 | `total_count` | int | 건수 |
 | `completed_count` | int | 개찰 완료 건수 |
 | `avg_sucsfbid_rate` | float \| null | 평균 낙찰률(%) |
@@ -289,6 +289,7 @@ GET /api/stats/category?from=2026-06-01&to=2026-09-11&region=서울
 | `source` 값 | 의미 | 신뢰도 |
 |---|---|---|
 | `main_cnstty` | `main_cnstty_nm` 원본값 사용 | 높음 — 조달청이 부여한 공식 분류 |
+| `license` | 면허제한정보의 첫 면허 사용 (2026-10-26 추가) | 높음 — 공고서의 면허 조건. 업종과 대분류 96% 일치 |
 | `keyword` | 공고명에서 키워드로 추론 | 중간 — 우리가 만든 규칙이라 오분류 가능 |
 | `none` | 어느 쪽으로도 분류 실패 | — |
 

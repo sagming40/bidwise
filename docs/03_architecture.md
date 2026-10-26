@@ -221,6 +221,7 @@ bidwise/
 │   │   ├── schemas.py          # Pydantic 요청/응답 스키마
 │   │   ├── collect.py          # 수집→정제→저장 수동 실행 (2026-10-26 추가, 스케줄러도 이걸 부른다)
 │   │   ├── reclassify.py       # 저장된 공고 재분류 (2026-10-26 추가, 7장 "재분류 배치 스크립트")
+│   │   ├── backfill_license.py # 저장된 공고에 면허제한정보 채우기 + 재분류 (2026-10-26 추가)
 │   │   │
 │   │   ├── collector/          # [Extract] API 호출
 │   │   │   ├── client.py       # 나라장터 API 클라이언트
@@ -230,6 +231,7 @@ bidwise/
 │   │   │   ├── convert.py      # 문자열 → int·Decimal·datetime·date 공용 변환 (2026-10-26 추가)
 │   │   │   ├── announcement.py # 입찰공고 API 필드 → DB 컬럼 (2026-10-26 추가)
 │   │   │   ├── result.py       # 낙찰정보 → DB 컬럼, 재입찰 시 최종 결과 고르기 (2026-10-26 추가)
+│   │   │   ├── license.py      # 면허제한정보 → 공고마다 첫 면허 (2026-10-26 추가)
 │   │   │   ├── region.py       # 지역명 정규화
 │   │   │   └── category.py     # 공사종류 분류 (폴백 포함)
 │   │   │

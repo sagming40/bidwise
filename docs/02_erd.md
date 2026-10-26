@@ -130,7 +130,8 @@ erDiagram
 | `fetched_at` | TIMESTAMP | N | — | 수집 메타데이터. 언제 이 레코드를 API에서 가져왔는지 기록 |
 | `region_normalized` | VARCHAR(20) | Y | — | **M2 추가.** 시/도 짧은 이름(`서울`, `전남광주` …, 16개). `cnstrtsite_rgn_nm` 첫 단어에서 계산 |
 | `category` | VARCHAR(20) | Y | — | **M2 추가.** 공종 대분류 11개 중 하나. 분류 못하면 NULL (5.2절) |
-| `category_source` | VARCHAR(20) | Y | — | **M2 추가.** `main_cnstty` / `keyword` / `none` — 분류 출처 |
+| `category_source` | VARCHAR(20) | Y | — | **M2 추가.** `main_cnstty` / `license` / `keyword` / `none` — 분류 출처 |
+| `lcns_lmt_nm` | VARCHAR(200) | Y | `lcnsLmtNm` (면허제한정보) | **2026-10-26 추가.** 첫 번째 면허 이름. 업종이 빈 공고의 공종 분류 2차 출처. 별도 오퍼레이션 `getBidPblancListInfoLicenseLimit`에서 온다 |
 
 **제약조건**
 - `UNIQUE (bid_ntce_no, bid_ntce_ord)` — 중복 수집 방지의 핵심. 같은 공고를 다시 수집해도 중복 행이 생기지 않는다
@@ -209,6 +210,9 @@ erDiagram
 > `main_cnstty_nm`은 실제로는 **면허 업종 47종**이라 "그대로 사용"하지 않고 **대분류 11개**
 > (건축·토목·전기·통신·기계설비·소방·조경·산림·환경·국가유산·기타)로 묶는다. 키워드 추정도 같은 11개 중 하나를 고른다.
 > 규칙과 정확도(79.3%)는 `backend/app/transformer/category.py`와 DEVLOG 2026-10-26 참고.
+>
+> → 2026-10-26 같은 날 보강: 업종이 빈 공고도 **면허제한정보**에는 면허(업종 이름)가 있다. 키워드보다 먼저 본다.
+> 최종 순서: **업종 → 면허 → 공고명 키워드 → 분류 못함** (`source`: `main_cnstty` / `license` / `keyword` / `none`).
 
 ### 5.3 낙찰률을 저장만 하고 계산하지 않는 이유
 
