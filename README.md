@@ -39,7 +39,7 @@ BidWise는 다른 질문에서 출발한다.
 
 정부가 "이 공사는 10억쯤 들겠다"고 잡아둔 금액이 **예정가격**이고, 실제로 9억에 공사를 따냈다면 낙찰률은 **90%**다. 낙찰률이 낮을수록 그만큼 경쟁이 치열했다는 뜻이다.
 
-> 이 값은 직접 계산하지 않고 나라장터 API가 제공하는 `sucsfbidRate`를 그대로 쓴다. 이유는 [`docs/02_erd.md` 5.3절](./docs/02_erd.md) 참고.
+> 이 값은 직접 계산하지 않고 나라장터 API가 제공하는 `sucsfbidRate`를 그대로 쓴다. 이유는 [`docs/DATA_MODEL.md` 3.3절](./docs/DATA_MODEL.md) 참고.
 
 ---
 
@@ -189,21 +189,18 @@ erDiagram
 
 ## 설계 문서
 
-이 프로젝트는 코드보다 설계 문서를 먼저 작성했다. 순서대로 읽으면 결정의 흐름을 따라갈 수 있다.
+| 문서 | 내용 |
+|---|---|
+| [요구사항](./docs/REQUIREMENTS.md) | 무엇을 만들고 무엇을 만들지 않는지, 유사 서비스와의 차이 |
+| [데이터 모델](./docs/DATA_MODEL.md) | 무엇을 어디에 왜 저장하는지, 1:0..1 관계 |
+| [아키텍처](./docs/ARCHITECTURE.md) | ETL 흐름, 레이어 책임, API 계약, 한계 |
+| [화면 설계](./docs/DESIGN.md) | 디자인 토큰, 화면별 규칙, 용어 사전 |
+| [목업](./docs/mockups/README.md) | 화면 그림 |
+| [결정 기록](./docs/decisions/README.md) | 왜 이렇게 정했는지 |
+| [계획](./MILESTONES.md) | M0 ~ M6 로드맵과 완료 기준 |
+| [개발일지](./DEVLOG.md) | 개발 중 마주친 문제와 해결 기록 |
 
-| # | 문서 | 내용 |
-|---|---|---|
-| 01 | [요구사항 정의](./docs/01_requirements.md) | MVP 범위, 핵심/확장 기능 구분 |
-| 02 | [ERD](./docs/02_erd.md) | 테이블 설계, 1:0..1 관계, API 실측으로 확정한 필드 |
-| 03 | [아키텍처](./docs/03_architecture.md) | ETL 파이프라인, 레이어 책임 분리, 한계와 트레이드오프 |
-| 04 | [API 명세](./docs/04_api_spec.md) | 엔드포인트 6종, 요청/응답 스펙, 근거 SQL |
-| 05 | [유즈케이스 · 시퀀스](./docs/05_usecase_sequence.md) | Actor 정의, 사용자 여정, 유사 서비스 조사 |
-| 06 | [UI/UX 설계](./docs/06_ui_ux.md) | 디자인 토큰, 화면별 근거, shadcn 매핑 |
-
-그 외:
-
-- [**마일스톤**](./MILESTONES.md) — M0~M6 개발 로드맵과 마일스톤별 완료 기준
-- [**개발일지**](./DEVLOG.md) — 개발 중 마주친 문제와 해결 기록
+처음에 코드보다 먼저 쓴 설계 문서 6종은 [`docs/archive/`](./docs/archive/README.md)에 그대로 있다.
 
 ---
 
@@ -279,7 +276,7 @@ npm run dev                     # http://localhost:5173
 
 ## 알려진 한계
 
-정직하게 적어둡니다. 개선 방향은 [`docs/03_architecture.md` 7장](./docs/03_architecture.md) 참고.
+정직하게 적어둡니다. 개선 방향은 [`docs/ARCHITECTURE.md` 5장](./docs/ARCHITECTURE.md) 참고.
 
 | 한계 | 내용 |
 |---|---|

@@ -11,12 +11,13 @@ BidWise: 나라장터 공사 입찰 데이터를 수집해서 지역별·공종�
 | 지금 어디까지 왔고 바로 다음에 뭘 해? | [`DEVLOG.md`](DEVLOG.md) "현재 상태" |
 | 무엇을 어떤 순서로 만들어? 완료 기준은? | [`MILESTONES.md`](MILESTONES.md) |
 | 겪은 문제와 해결, 결정의 근거는? | [`DEVLOG.md`](DEVLOG.md) "기록" (최신이 위) |
-| 기능 범위는? | [`docs/01_requirements.md`](docs/01_requirements.md) |
-| DB는 어떻게 생겼고 왜? | [`docs/02_erd.md`](docs/02_erd.md) |
-| 레이어·디렉터리 구조는? | [`docs/03_architecture.md`](docs/03_architecture.md) (구조는 5장) |
-| 조회 API 요청·응답은? | [`docs/04_api_spec.md`](docs/04_api_spec.md) |
-| 사용자 흐름은? | [`docs/05_usecase_sequence.md`](docs/05_usecase_sequence.md) |
-| 화면은 어떻게 생겼고 왜? | [`docs/06_ui_ux.md`](docs/06_ui_ux.md) |
+| 왜 이렇게 정했어? | [`docs/decisions/`](docs/decisions/README.md), 작은 판단은 DEVLOG `[설계]` |
+| 기능 범위는? 하지 않을 것은? 사용자 흐름은? | [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) |
+| DB는 어떻게 생겼고 왜? | [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md) (컬럼은 `backend/app/models.py` · `backend/alembic/versions/`) |
+| 레이어·디렉터리 구조, 흐름, 개발 환경은? | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (구조는 4장) |
+| 조회 API 요청·응답은? | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) 3장 (구현한 것은 Swagger `/docs`가 원본) |
+| 화면은 어떻게 생겼고 왜? | [`docs/DESIGN.md`](docs/DESIGN.md), 그림은 [`docs/mockups/`](docs/mockups/README.md) |
+| 옛 문서는 어디로 갔어? | [`docs/archive/`](docs/archive/README.md) 대응표 |
 | 이게 뭐고 어떻게 실행해? | [`README.md`](README.md) |
 | 작업할 때 항상 지킬 규칙은? | 이 파일 |
 
