@@ -45,15 +45,15 @@ BidWise는 다른 질문에서 출발한다.
 
 ## 화면
 
-Figma 하이파이 목업: **[BidWise — UI Mockup](https://www.figma.com/design/1U0pJWd9aJGnNgIOTz4voD/BidWise-%E2%80%94-UI-Mockup)**
+목업은 [`docs/mockups/`](./docs/mockups/README.md)에 HTML로 있다(더블클릭으로 열림). 원본은 Figma 하이파이 목업: **[BidWise — UI Mockup](https://www.figma.com/design/1U0pJWd9aJGnNgIOTz4voD/BidWise-%E2%80%94-UI-Mockup)**
 
-| 화면 | 설명 | 바로가기 |
+| 화면 | 설명 | 파일 |
 |---|---|---|
-| 메인 대시보드 | 요약 통계 · 지역별 지도 · 공종별 차트 · 필터 | [`?node-id=1-19`](https://www.figma.com/design/1U0pJWd9aJGnNgIOTz4voD/BidWise-%E2%80%94-UI-Mockup?node-id=1-19) |
-| 지역 선택 → 공고 목록 | 지도 클릭 시 해당 지역 공고 리스트로 드릴다운 | [`?node-id=4-447`](https://www.figma.com/design/1U0pJWd9aJGnNgIOTz4voD/BidWise-%E2%80%94-UI-Mockup?node-id=4-447) |
-| 토큰 & 컴포넌트 | 디자인 토큰 · 컴포넌트 상태 · 용어 사전 | [`?node-id=6-2`](https://www.figma.com/design/1U0pJWd9aJGnNgIOTz4voD/BidWise-%E2%80%94-UI-Mockup?node-id=6-2) |
-| 빈 상태 | 조건에 맞는 결과가 0건일 때 | [`?node-id=12-2`](https://www.figma.com/design/1U0pJWd9aJGnNgIOTz4voD/BidWise-%E2%80%94-UI-Mockup?node-id=12-2) |
-| 용어 툴팁 | 도메인 용어 설명 팝오버 | [`?node-id=15-2`](https://www.figma.com/design/1U0pJWd9aJGnNgIOTz4voD/BidWise-%E2%80%94-UI-Mockup?node-id=15-2) |
+| 메인 대시보드 | 요약 통계 · 지역별 지도 · 공종별 차트 · 필터 | [`Dashboard.desktop.html`](./docs/mockups/Dashboard.desktop.html) |
+| 지역 선택 → 공고 목록 | 지도 클릭 시 해당 지역 공고 리스트로 드릴다운 | [`Region.desktop.html`](./docs/mockups/Region.desktop.html) |
+| 토큰 & 컴포넌트 | 디자인 토큰 · 컴포넌트 상태 · 용어 사전 | [`Tokens.html`](./docs/mockups/Tokens.html) |
+| 빈 상태 | 조건에 맞는 결과가 0건일 때 | [`Empty.desktop.html`](./docs/mockups/Empty.desktop.html) |
+| 용어 팝오버 | 도메인 용어 설명 | [`Glossary.desktop.html`](./docs/mockups/Glossary.desktop.html) |
 
 ---
 

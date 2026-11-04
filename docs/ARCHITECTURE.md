@@ -131,6 +131,7 @@ sequenceDiagram
 
 | 항목 | 값 |
 |---|---|
+| Base URL (개발) | `http://localhost:8000` |
 | 응답 형식 | `application/json`, UTF-8 |
 | 인증 | 없음 |
 | 날짜 | 요청 · 응답 `YYYY-MM-DD`, 일시 ISO 8601. 나라장터의 제각각 형식은 백엔드가 변환한다 |
