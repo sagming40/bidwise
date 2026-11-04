@@ -2,7 +2,7 @@
 
 > 조달청 나라장터 공사 입찰 데이터를 수집·분석해, 지역별·공종별 낙찰 경향을 지도와 차트로 조망하는 웹 대시보드
 
-[![상태](https://img.shields.io/badge/상태-M3%20조회%20API%20준비-F2C12E)](./MILESTONES.md)
+[![상태](https://img.shields.io/badge/상태-M3%20조회%20API%20준비-F2C12E)](./docs/PLAN.md)
 [![백엔드](https://img.shields.io/badge/backend-Python%20·%20FastAPI-3776AB)](#기술-스택)
 [![DB](https://img.shields.io/badge/database-PostgreSQL-336791)](#기술-스택)
 [![프론트](https://img.shields.io/badge/frontend-React%20·%20TypeScript-61DAFB)](#기술-스택)
@@ -67,7 +67,7 @@ flowchart TB
     end
 
     subgraph BE["Backend · Python"]
-        SCHED["APScheduler<br/>일 1회"]
+        SCHED["APScheduler<br/>일 1회 (구현 전)"]
         COLL["Collector<br/>수집 · 페이징"]
         TRANS["Transformer<br/>정제 · 분류"]
         REPO["Repository<br/>저장 · 중복처리"]
@@ -141,20 +141,22 @@ erDiagram
 
 ## 주요 기능
 
-| 기능 | 상태 | 설명 |
-|---|---|---|
-| 나라장터 데이터 자동 수집 | 🟡 수동 수집 완료 | 두 API를 `(bid_ntce_no, bid_ntce_ord)`로 연결, 일 1회 스케줄링 — 수동 수집·연결까지 완료, 스케줄링은 M3 이후 |
-| 지역·공종 정제 및 분류 | ✅ 완료 | 16개 시/도로 정규화, 공종 대분류 11개 · 3단계 폴백(업종 → 면허 → 키워드), 재분류 명령 |
-| 요약 통계 대시보드 | ⬜ 예정 | 전체 공고 수 · 평균 낙찰률 · 예산 규모 |
-| 지역별 낙찰률 지도 | ⬜ 예정 | ECharts 코로플레스, 5단계 블루 스케일 |
-| 공종별 낙찰률 차트 | ⬜ 예정 | Recharts 막대그래프, 분류 신뢰도 배지 포함 |
-| 지도 클릭 → 공고 목록 | ⬜ 예정 | 지역 드릴다운, 낙찰완료/개찰 전 상태 구분 |
-| 기간·지역·공종 필터 | ⬜ 예정 | 모든 화면에 동시 반영 |
-| 도메인 용어 설명 | ⬜ 예정 | 용어 8종 팝오버 — 비전공자 접근성 |
+| 기능 | 설명 |
+|---|---|
+| 나라장터 데이터 수집 | 두 API를 `(bid_ntce_no, bid_ntce_ord)`로 연결. 지금은 수동 명령, 일 1회 자동 실행은 구현 전 |
+| 지역·공종 정제 및 분류 | 16개 시/도로 정규화, 공종 대분류 11개 · 3단계 폴백(업종 → 면허 → 키워드), 재분류 명령 |
+| 요약 통계 대시보드 | 전체 공고 수 · 평균 낙찰률 · 예산 규모 |
+| 지역별 낙찰률 지도 | ECharts 코로플레스, 5단계 블루 스케일 (구간은 실제 값 범위 기준) |
+| 공종별 낙찰률 차트 | Recharts 막대그래프, 분류 신뢰도 배지 포함 |
+| 지도 클릭 → 공고 목록 | 지역 드릴다운, 낙찰완료/개찰 전 상태 구분 |
+| 기간·지역·공종 필터 | 모든 화면에 동시 반영 |
+| 도메인 용어 설명 | 용어 8종 팝오버 — 비전공자 접근성 |
+
+어디까지 만들었는지는 [`docs/PLAN.md`](./docs/PLAN.md) 3장에 있다. 지금은 수집 · 정제 · 집계 쿼리까지이고 조회 API와 화면은 M3부터다.
 
 ### 공종 분류는 3단계 폴백으로 처리한다
 
-나라장터가 제공하는 `mainCnsttyNm`(주공종명)은 **적격심사를 거치는 경쟁입찰에만 채워진다.** 수의계약 건에서는 비어 있다는 것을 API 응답으로 직접 확인했다.
+나라장터가 제공하는 `mainCnsttyNm`(주공종명)은 주로 경쟁입찰에 채워지고 수의계약 건에서는 대개 비어 있다. 하루치 571건을 세어 보니 경향이지 규칙은 아니어서, 계약방법이 아니라 값이 있는지만 본다.
 
 ```
 1차: main_cnstty_nm(면허 업종 47종)이 있으면 대분류 11개로 묶어 사용   → source: main_cnstty
@@ -167,7 +169,7 @@ erDiagram
 업종이 없는 공고(전체의 72%)도 89%는 면허제한정보로 분류되고, 면허와 업종의 대분류 일치율은 98%다.
 키워드로 추정하는 건 7% 정도이고, 분류 못하는 공고는 1.3%다 (2026-10-26, 공고 1만 건 기준).
 
-분류 방식에 따라 정확도가 다르므로, API 응답에 `source` 필드를 포함하고 화면에서도 배지로 구분한다. 정확도가 다른 데이터를 같은 얼굴로 보여주면 사용자가 과신하게 되기 때문이다.
+분류 방식에 따라 정확도가 다르므로, 출처를 `category_source`에 저장하고 화면에서도 배지로 구분한다. 정확도가 다른 데이터를 같은 얼굴로 보여주면 사용자가 과신하게 되기 때문이다.
 
 ---
 
@@ -175,7 +177,7 @@ erDiagram
 
 | 구분 | 기술 | 선택 이유 |
 |---|---|---|
-| **Backend** | Python, FastAPI | 공공 API 응답 정제에 pandas 생태계가 압도적으로 유리 |
+| **Backend** | Python, FastAPI | 공공 API 응답 정제에 Python 생태계가 편하고 Swagger가 따라옴 |
 | **ORM** | SQLAlchemy | |
 | **스케줄러** | APScheduler | 별도 인프라 없이 앱 내에서 주기 실행 |
 | **DB** | PostgreSQL | 집계·통계 SQL이 핵심이라 관계형 DB, 그중 집계 함수가 강한 쪽 |
@@ -197,8 +199,8 @@ erDiagram
 | [화면 설계](./docs/DESIGN.md) | 디자인 토큰, 화면별 규칙, 용어 사전 |
 | [목업](./docs/mockups/README.md) | 화면 그림 |
 | [결정 기록](./docs/decisions/README.md) | 왜 이렇게 정했는지 |
-| [계획](./MILESTONES.md) | M0 ~ M6 로드맵과 완료 기준 |
-| [개발일지](./DEVLOG.md) | 개발 중 마주친 문제와 해결 기록 |
+| [계획](./docs/PLAN.md) | M0 ~ M6 로드맵과 완료 기준 |
+| [개발일지](./docs/DEVLOG.md) | 개발 중 마주친 문제와 해결 기록 |
 
 처음에 코드보다 먼저 쓴 설계 문서 6종은 [`docs/archive/`](./docs/archive/README.md)에 그대로 있다.
 
@@ -220,7 +222,7 @@ flowchart LR
 
 **M3가 관통 지점이다.** 수집 → 저장 → 집계 → API → 화면까지 전 구간을 한 번 연결하는 시점으로, 여기까지 도달하면 이후 작업은 전부 "이미 연결된 길에 살을 붙이는 것"이 된다.
 
-기능을 하나씩 완성하는 대신 가장 얇은 한 줄기를 먼저 끝까지 관통시키는 순서다. 자세한 내용은 [`MILESTONES.md`](./MILESTONES.md) 참고.
+기능을 하나씩 완성하는 대신 가장 얇은 한 줄기를 먼저 끝까지 관통시키는 순서다. 자세한 내용은 [`docs/PLAN.md`](./docs/PLAN.md) 참고.
 
 ---
 
@@ -256,7 +258,7 @@ uvicorn main:app --reload       # http://localhost:8000/docs  (M3 이후)
 
 > 2026-10-24 이전 방식(`create_tables.py`)으로 이미 테이블을 만든 DB라면, 테이블을 다시 만들지 말고 `alembic stamp 0001`을 한 번 실행한 뒤 `alembic upgrade head`를 쓰세요.
 
-> PostgreSQL 15+에서는 새로 만든 DB 유저에게 `public` 스키마 CREATE 권한이 기본으로 없습니다. 테이블 생성이 권한 오류로 실패하면 `bidwise` DB에서 `GRANT ALL ON SCHEMA public TO <유저명>;`을 실행하세요. ([DEVLOG](./DEVLOG.md) 2026-09-12 참고)
+> PostgreSQL 15+에서는 새로 만든 DB 유저에게 `public` 스키마 CREATE 권한이 기본으로 없습니다. 테이블 생성이 권한 오류로 실패하면 `bidwise` DB에서 `GRANT ALL ON SCHEMA public TO <유저명>;`을 실행하세요. ([DEVLOG](./docs/DEVLOG.md) 2026-09-12 참고)
 
 ### 프론트엔드 (M3 이후)
 
