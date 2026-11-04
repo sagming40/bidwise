@@ -23,7 +23,7 @@ def test_실제_응답을_DB_행으로_바꾼다(real_announcements_page):
 
 
 def test_실제_응답의_빈_문자열은_None(real_announcements_page):
-    # 수의계약 건은 mainCnsttyNm이 ""로 온다 (02_erd.md 5.2절). ""가 아니라 NULL로 저장해야 한다.
+    # 수의계약 건은 mainCnsttyNm이 ""로 온다 (DATA_MODEL 3.2절). ""가 아니라 NULL로 저장해야 한다.
     for item in real_announcements_page["response"]["body"]["items"]:
         assert to_announcement_row(item)["main_cnstty_nm"] is None
 

@@ -24,7 +24,7 @@ def classification_of(cnstrtsite_rgn_nm: str | None, main_cnstty_nm: str | None,
 def to_announcement_row(item: dict, lcns_lmt_nm: str | None = None) -> dict:
     """
     입찰공고 API 항목 하나 → bid_announcements 행 하나.
-    API 응답에는 필드가 143개 있지만, ERD(02_erd.md 4.1절)에서 고른 12개만 옮겨 담고,
+    API 응답에는 필드가 143개 있지만, models.py의 BidAnnouncement에 있는 12개만 옮겨 담고,
     면허제한정보의 첫 면허(별도 API라 따로 받아서 넘겨준다)와 M2 정제 결과(지역·공종) 3개를 덧붙인다.
     id·fetched_at은 DB와 repository가 채운다.
     """

@@ -29,7 +29,7 @@ class Base(DeclarativeBase):
 class BidAnnouncement(Base):
     """
     입찰공고 테이블 ─ "이런 공사가 나왔습니다." 게시글 한 장
-    (02_erd.md 4.1절 기준)
+    (왜 이렇게 저장하는지는 docs/DATA_MODEL.md. 컬럼은 이 파일이 원본)
     """
     __tablename__ = "bid_announcements"
 
@@ -46,10 +46,10 @@ class BidAnnouncement(Base):
     dminstt_nm: Mapped[str | None] = mapped_column(String(400))     # 수요기관명
 
     # 지역 분석의 기준 필드. dminstt_nm(수요기관 소재지)이 아니라
-    # 이 필드를 사용하는 이유는 "실제로 공사가 이뤄지는 곳"이 맞기 때문 (02_erd.md 5.2절)
+    # 이 필드를 사용하는 이유는 "실제로 공사가 이뤄지는 곳"이 맞기 때문 (DATA_MODEL 3.1절)
     cnstrtsite_rgn_nm: Mapped[str | None] = mapped_column(String(200))
 
-    # 수의계약 건에서는 비어있음 (02_erd.md 5.2절 실측 확인)
+    # 수의계약 건에서는 비어있음 (DATA_MODEL 3.2절 실측 확인)
     main_cnstty_nm: Mapped[str | None] = mapped_column(String(300))
 
     cntrct_ccncls_mthd_nm: Mapped[str | None] = mapped_column(String(500))  # 계약체결방법 ─ main_cnstty_nm이 비어있는 이유를 설명해줌
@@ -72,7 +72,7 @@ class BidAnnouncement(Base):
 
     # ── M2 정제 결과 (2026-10-26 추가, 마이그레이션 0002) ──
     # 원본은 그대로 두고 손질한 값을 옆 칸에 따로 적는다. 규칙을 고치면 원본에서 다시 계산할 수 있게.
-    # 시/도 짧은 이름 ("서울", "전남광주" …). 지역별 GROUP BY·필터 기준이라 인덱스 (04_api_spec.md 3.2절)
+    # 시/도 짧은 이름 ("서울", "전남광주" …). 지역별 GROUP BY·필터 기준이라 인덱스 (DATA_MODEL 3.1절)
     region_normalized: Mapped[str | None] = mapped_column(String(20))
     # 공종 대분류 ("건축", "토목" … "기타"). 분류 못하면 NULL
     category: Mapped[str | None] = mapped_column(String(20))

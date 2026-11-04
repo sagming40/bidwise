@@ -23,7 +23,7 @@ def pick_final_results(items: list[dict]) -> list[dict]:
 
     낙찰정보 행은 (공고번호, 차수) 말고도 분류번호(bidClsfcNo)·재입찰번호(rbidNo)로 나뉜다.
     유찰 뒤 재입찰하면 rbidNo가 "001"로 오른 행이 따로 생긴다 (2026-10-26 실측 표본에 1건).
-    우리 ERD는 공고 1 : 결과 0..1이라(02_erd.md 2장), 재입찰번호가 가장 큰 것 = 최종 결과를 고른다.
+    우리 모델은 공고 1 : 결과 0..1이라(DATA_MODEL 2장), 재입찰번호가 가장 큰 것 = 최종 결과를 고른다.
     비유: 같은 시험을 재시험 봤으면 성적표는 마지막 시험 것 한 장만 남긴다.
     """
     final: dict[tuple[str, str], dict] = {}
@@ -36,7 +36,7 @@ def pick_final_results(items: list[dict]) -> list[dict]:
 
 def to_result_row(item: dict) -> dict:
     """
-    낙찰정보 API 항목 하나 → bid_results 행 하나 (02_erd.md 4.2절).
+    낙찰정보 API 항목 하나 → bid_results 행 하나 (models.py의 BidResult).
     announcement_id·id·fetched_at은 repository가 채운다.
     """
     bid_ntce_no, bid_ntce_ord = _key(item)

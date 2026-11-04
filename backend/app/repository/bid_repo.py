@@ -175,7 +175,7 @@ def _base_counts():
 
 
 def get_summary(session: Session, date_from: date, date_to: date, region: str | None = None) -> dict:
-    """대시보드 요약 카드 (04_api_spec.md 3.1절)."""
+    """대시보드 요약 카드 (ARCHITECTURE 3.1절)."""
     stmt = (
         select(*_base_counts(), func.coalesce(func.sum(BidAnnouncement.bdgt_amt), 0).label("total_budget_amt"))
         .select_from(BidAnnouncement)
@@ -191,13 +191,13 @@ def get_summary(session: Session, date_from: date, date_to: date, region: str | 
         "pending_count": row.total_count - row.completed_count,
         "avg_sucsfbid_rate": row.avg_sucsfbid_rate,
         # PostgreSQL의 SUM(BIGINT)는 numeric(Decimal)으로 돌아온다 (SQLite는 int라 테스트로는 안 보였다 ─ 2026-10-26 실제 DB에서 발견).
-        # 금액 합계는 원 단위 정수라 int로 맞춘다 (04_api_spec.md 3.1절)
+        # 금액 합계는 원 단위 정수라 int로 맞춘다 (ARCHITECTURE 3.1절)
         "total_budget_amt": int(row.total_budget_amt),
     }
 
 
 def get_region_stats(session: Session, date_from: date, date_to: date) -> list[dict]:
-    """지역별 낙찰률 (지도용, 04_api_spec.md 3.2절). 결과가 하나도 없는 지역도 avg=None으로 포함된다."""
+    """지역별 낙찰률 (지도용, ARCHITECTURE 3.2절). 결과가 하나도 없는 지역도 avg=None으로 포함된다."""
     stmt = (
         select(
             BidAnnouncement.region_normalized.label("region"),
@@ -217,7 +217,7 @@ def get_category_stats(
     session: Session, date_from: date, date_to: date, region: str | None = None, limit: int = 10
 ) -> list[dict]:
     """
-    공종 대분류별 낙찰률 (막대차트용, 04_api_spec.md 3.3절). 분류 못한 공고는 "미분류"로 묶는다.
+    공종 대분류별 낙찰률 (막대차트용, ARCHITECTURE 3.3절). 분류 못한 공고는 "미분류"로 묶는다.
     한 대분류 안에 업종으로 분류된 것과 키워드로 추정한 것이 섞이므로, 추정 건수(keyword_count)를 같이 준다.
     """
     category = func.coalesce(BidAnnouncement.category, UNCLASSIFIED).label("category")
